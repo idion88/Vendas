@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Preços</title>
+    <style>
+        /* Variáveis de Cores - Tema Claro (Padrão) */
+        :root {
+            --cor-fundo: #f0f4f8;
+            --cor-container: #ffffff;
+            --cor-texto: #2c3e50;
+            --cor-texto-secundario: #34495e;
+            --cor-borda: #bdc3c7;
+            --cor-borda-clara: #e0e0e0;
+            --cor-destaque: #2980b9;
+            --cor-destaque-escuro: #1f618d;
+            --cor-fundo-card: #eaf2f8;
+            --cor-fundo-relatorio: #f8f9fa;
+            --cor-borda-relatorio: #e9ecef;
+            --cor-botao-perigo: #e74c3c;
+            --cor-botao-perigo-escuro: #c0392b;
+            --cor-sombra: rgba(0,0,0,0.1);
+        }
+
+        /* Variáveis de Cores - Tema Escuro */
+        .tema-escuro {
+            --cor-fundo: #121212;
+            --cor-container: #1e1e1e;
+            --cor-texto: #f1f1f1;
+            --cor-texto-secundario: #e0e0e0;
+            --cor-borda: #444444;
+            --cor-borda-clara: #333333;
+            --cor-destaque: #5dade2;
+            --cor-destaque-escuro: #3498db;
+            --cor-fundo-card: #2c3e50;
+            --cor-fundo-relatorio: #2a2a2a;
+            --cor-borda-relatorio: #444444;
+            --cor-botao-perigo: #e74c3c;
+            --cor-botao-perigo-escuro: #c0392b;
+            --cor-sombra: rgba(255,255,255,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s; /* Transição suave entre temas */
+        }
+
+        body {
+            background-color: var(--cor-fundo);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: var(--cor-container);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--cor-sombra);
+            position: relative;
+        }
+
+        /* Botão de Alternar Tema */
+        .botao-tema {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 7px 12px;
+            background-color: var(--cor-destaque);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .botao-tema:hover {
+            background-color: var(--cor-destaque-escuro);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--cor-texto);
+            margin-bottom: 25px;
+            font-size: 22px;
+            margin-top: 25px; /* Espaço para o botão de tema */
+        }
+
+        .grupo-campo {
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--cor-texto-secundario);
+            font-weight: 500;
+        }
+
+        .prefixo {
+            position: absolute;
+            left: 12px;
+            top: 38px;
+            color: var(--cor-texto-secundario);
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px 10px 35px;
+            border: 1px solid var(--cor-borda);
+            border-radius: 6px;
+            font-size: 16px;
+            background-color: var(--cor-container);
+            color: var(--cor-texto);
+        }
+
+        input.sem-prefixo {
+            padding-left: 12px;
+        }
+
+        input:disabled {
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            font-weight: bold;
+        }
+
+        .botao-limpar {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--cor-botao-perigo);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-bottom: 25px;
+        }
+
+        .botao-limpar:hover {
+            background-color: var(--cor-botao-perigo-escuro);
+        }
+
+        .area-resultados {
+            border-top: 2px solid var(--cor-borda-clara);
+            padding-top: 20px;
+        }
+
+        h2 {
+            color: var(--cor-texto);
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .dados-lucro {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .card-lucro {
+            flex: 1;
+            min-width: 200px;
+            background: var(--cor-fundo-card);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .card-lucro strong {
+            display: block;
+            font-size: 14px;
+            color: var(--cor-destaque);
+        }
+
+        .card-lucro span {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--cor-texto);
+        }
+
+        .relatorio {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: var(--cor-fundo-relatorio);
+            border-radius: 8px;
+            border: 1px solid var(--cor-borda-relatorio);
+            position: relative;
+        }
+
+        .botao-copiar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--cor-destaque);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .botao-copiar:hover {
+            background-color: var(--cor-destaque-escuro);
+        }
+
+        .relatorio p {
+            margin: 8px 0;
+            color: var(--cor-texto-secundario);
+            font-size: 15px;
+        }
+
+        .valor-destaque {
+            font-weight: bold;
+            color: var(--cor-destaque);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Botão de Alternar Tema -->
+        <button class="botao-tema" id="alternarTema">
+            🌙 Tema Escuro
+        </button>
+
+        <h1>Calculadora de Preços</h1>
+
+        <!-- CAMPO NOVO: NOME DO PRODUTO -->
+        <div class="grupo-campo">
+            <label for="nomeProduto">Nome / Descrição do Produto:</label>
+            <input type="text" id="nomeProduto" class="sem-prefixo" placeholder="Ex: Camiseta, Calça, Eletrônico...">
+        </div>
+
+        <!-- CAMPOS DE ENTRADA -->
+        <div class="grupo-campo">
+            <label for="valorProduto">Valor do Produto:</label>
+            <span class="prefixo">R$</span>
+            <input type="number" id="valorProduto" step="0.01" min="0" placeholder="0,00" oninput="calcularTudo()">
+        </div>
+
+        <div class="grupo-campo">
+            <label for="taxaCompra">Taxa de Compra:</label>
+            <span class="prefixo">R$</span>
+            <input type="number" id="taxaCompra" step="0.01" min="0" placeholder="0,00" oninput="calcularTudo()">
+        </div>
+
+        <div class="grupo-campo">
+            <label for="taxaCartao">Taxa do Cartão:</label>
+            <span class="prefixo">%</span>
+            <input type="number" id="taxaCartao" step="0.01" min="0" placeholder="0,00" oninput="calcularTudo()">
+        </div>
+
+        <div class="grupo-campo">
+            <label for="jurosVenda">Juros de Venda:</label>
+            <span class="prefixo">%</span>
+            <input type="number" id="jurosVenda" step="0.01" min="0" placeholder="0,00" oninput="calcularTudo()">
+        </div>
+
+        <!-- NOVO CAMPO: PARCELAS -->
+        <div class="grupo-campo">
+            <label for="parcelas">Parcelas:</label>
+            <span class="prefixo">x</span>
+            <input type="number" id="parcelas" min="1" value="1" placeholder="1" oninput="calcularTudo()">
+        </div>
+
+        <button class="botao-limpar" onclick="limparTudo()">Limpar Tudo</button>
+
+        <!-- CAMPOS DE EXIBIÇÃO -->
+        <div class="area-resultados">
+            <div class="grupo-campo">
+                <label for="custoTotalProduto">Custo Total do Produto (R$):</label>
+                <input type="text" id="custoTotalProduto" disabled>
+            </div>
+
+            <div class="grupo-campo">
+                <label for="custosDetalhados">Custos (detalhamento):</label>
+                <input type="text" id="custosDetalhados" disabled>
+            </div>
+
+            <div class="grupo-campo">
+                <label for="valorVenda">Valor de Venda Arredondado (R$):</label>
+                <input type="text" id="valorVenda" disabled>
+            </div>
+
+            <!-- NOVO CAMPO: VALOR DA PARCELA -->
+            <div class="grupo-campo">
+                <label for="valorParcela">Valor de cada Parcela (R$):</label>
+                <input type="text" id="valorParcela" disabled>
+            </div>
+
+            <!-- NOVO: DETALHES DO LUCRO -->
+            <div class="dados-lucro">
+                <div class="card-lucro">
+                    <strong>Lucro Bruto (antes do arred.)</strong>
+                    <span id="lucroBruto">R$ 0,00</span>
+                </div>
+                <div class="card-lucro">
+                    <strong>Lucro Real (valor final)</strong>
+                    <span id="lucroReal">R$ 0,00</span>
+                </div>
+                <div class="card-lucro">
+                    <strong>Percentual de Lucro</strong>
+                    <span id="lucroPercentual">0,00 %</span>
+                </div>
+            </div>
+
+            <div class="grupo-campo">
+                <label for="lucroTotal">Resumo do Lucro:</label>
+                <input type="text" id="lucroTotal" disabled>
+            </div>
+        </div>
+
+        <!-- RELATÓRIO FINAL -->
+        <div class="relatorio" id="blocoRelatorio">
+            <h2>📋 Relatório Completo</h2>
+            <button class="botao-copiar" onclick="copiarRelatorio()">Copiar</button>
+            
+            <p><strong>Produto:</strong> <span id="relNomeProduto" class="valor-destaque">---</span></p>
+            <p><strong>Valor do Produto:</strong> <span id="relValProduto" class="valor-destaque"></span></p>
+            <p><strong>Taxa de Compra adicionada:</strong> <span id="relTaxaCompra" class="valor-destaque"></span></p>
+            <p><strong>Taxa do Cartão aplicada:</strong> <span id="relTaxaCartao" class="valor-destaque"></span></p>
+            <p><strong>Custo Total do Produto:</strong> <span id="relCustoTotal" class="valor-destaque"></span></p>
+            <p><strong>Juros de Venda definido:</strong> <span id="relJurosVenda" class="valor-destaque"></span></p>
+            <p><strong>Parcelas:</strong> <span id="relParcelas" class="valor-destaque"></span></p>
+            <p><strong>Valor Bruto de Venda:</strong> <span id="relValorBruto" class="valor-destaque"></span></p>
+            <p><strong>Valor Final de Venda (arredondado):</strong> <span id="relValorVenda" class="valor-destaque"></span></p>
+            <p><strong>Valor de cada Parcela:</strong> <span id="relValorParcela" class="valor-destaque"></span></p>
+            <p><strong>Lucro Obtido:</strong> <span id="relLucro" class="valor-destaque"></span></p>
+        </div>
+
+    </div>
+
+    <script>
+        const botaoAlternarTema = document.getElementById('alternarTema');
+        const corpoPagina = document.body;
+
+        // Verifica se já existe tema salvo
+        if (localStorage.getItem('temaCalculadoraPrecos') === 'escuro') {
+            corpoPagina.classList.add('tema-escuro');
+            botaoAlternarTema.innerHTML = '☀️ Tema Claro';
+        }
+
+        // Função para alternar tema
+        botaoAlternarTema.addEventListener('click', () => {
+            corpoPagina.classList.toggle('tema-escuro');
+            
+            if (corpoPagina.classList.contains('tema-escuro')) {
+                localStorage.setItem('temaCalculadoraPrecos', 'escuro');
+                botaoAlternarTema.innerHTML = '☀️ Tema Claro';
+            } else {
+                localStorage.setItem('temaCalculadoraPrecos', 'claro');
+                botaoAlternarTema.innerHTML = '🌙 Tema Escuro';
+            }
+        });
+
+        // Função principal de cálculo
+        function calcularTudo() {
+            // Pegar valores dos campos de entrada
+            let nomeProduto = document.getElementById('nomeProduto').value || "Não informado";
+            let valorProduto = parseFloat(document.getElementById('valorProduto').value) || 0;
+            let taxaCompra = parseFloat(document.getElementById('taxaCompra').value) || 0;
+            let taxaCartao = parseFloat(document.getElementById('taxaCartao').value) || 0;
+            let jurosVenda = parseFloat(document.getElementById('jurosVenda').value) || 0;
+            let parcelas = parseInt(document.getElementById('parcelas').value) || 1;
+
+            // Garantir valores válidos
+            taxaCompra = Math.max(taxaCompra, 0);
+            taxaCartao = Math.max(taxaCartao, 0);
+            jurosVenda = Math.max(jurosVenda, 0);
+            parcelas = Math.max(parcelas, 1); // Mínimo 1 parcela
+
+            // Cálculos base
+            let somaInicial = valorProduto + taxaCompra;
+            let valorTaxaCartao = somaInicial * (taxaCartao / 100);
+            let custoTotalProduto = somaInicial + valorTaxaCartao;
+
+            let valorJurosVenda = custoTotalProduto * (jurosVenda / 100);
+            let valorVendaBruto = custoTotalProduto + valorJurosVenda;
+
+            // === REGRAS DE ARREDONDAMENTO ===
+            let parteInteira = Math.floor(valorVendaBruto);
+            let centavos = valorVendaBruto - parteInteira;
+            let finalInteiro = parteInteira % 100;
+
+            let valorVendaArredondado;
+
+            if ((finalInteiro >= 1 && finalInteiro <= 49) || (finalInteiro === 0 && centavos > 0)) {
+                valorVendaArredondado = parteInteira - finalInteiro + 50;
+            } else if ((finalInteiro >= 51 && finalInteiro <= 99) || (finalInteiro === 50 && centavos > 0)) {
+                valorVendaArredondado = parteInteira - finalInteiro + 100;
+            } else {
+                valorVendaArredondado = parteInteira;
+            }
+
+            valorVendaArredondado = Math.max(valorVendaArredondado, 0);
+
+            // Cálculo do valor da parcela
+            let valorParcela = valorVendaArredondado / parcelas;
+
+            // Cálculos de Lucro
+            let lucroBruto = valorVendaBruto - custoTotalProduto;
+            let lucroReal = valorVendaArredondado - custoTotalProduto;
+            let lucroPercentual = valorVendaArredondado > 0 ? (lucroReal / valorVendaArredondado) * 100 : 0;
+
+            // Preencher campos de exibição
+            document.getElementById('custoTotalProduto').value = formatarMoeda(custoTotalProduto);
+            document.getElementById('custosDetalhados').value = `Taxa Compra: R$${formatarMoeda(taxaCompra)} | Cartão: ${taxaCartao.toFixed(2)}% (R$${formatarMoeda(valorTaxaCartao)})`;
+            document.getElementById('valorVenda').value = formatarMoeda(valorVendaArredondado);
+            document.getElementById('valorParcela').value = `${parcelas}x de R$ ${formatarMoeda(valorParcela)}`;
+            
+            // Atualizar cards de lucro
+            document.getElementById('lucroBruto').innerText = `R$ ${formatarMoeda(lucroBruto)}`;
+            document.getElementById('lucroReal').innerText = `R$ ${formatarMoeda(lucroReal)}`;
+            document.getElementById('lucroPercentual').innerText = `${lucroPercentual.toFixed(2)} %`;
+
+            document.getElementById('lucroTotal').value = `R$${formatarMoeda(lucroReal)} | ${lucroPercentual.toFixed(2)}% sobre o valor de venda`;
+
+            // Preencher Relatório
+            document.getElementById('relNomeProduto').textContent = nomeProduto;
+            document.getElementById('relValProduto').textContent = `R$ ${formatarMoeda(valorProduto)}`;
+            document.getElementById('relTaxaCompra').textContent = `R$ ${formatarMoeda(taxaCompra)}`;
+            document.getElementById('relTaxaCartao').textContent = `${taxaCartao.toFixed(2)}% (R$ ${formatarMoeda(valorTaxaCartao)})`;
+            document.getElementById('relCustoTotal').textContent = `R$ ${formatarMoeda(custoTotalProduto)}`;
+            document.getElementById('relJurosVenda').textContent = `${jurosVenda.toFixed(2)}%`;
+            document.getElementById('relParcelas').textContent = `${parcelas}x`;
+            document.getElementById('relValorBruto').textContent = `R$ ${formatarMoeda(valorVendaBruto)}`;
+            document.getElementById('relValorVenda').textContent = `R$ ${formatarMoeda(valorVendaArredondado)}`;
+            document.getElementById('relValorParcela').textContent = `${parcelas}x de R$ ${formatarMoeda(valorParcela)}`;
+            document.getElementById('relLucro').textContent = `R$ ${formatarMoeda(lucroReal)} | ${lucroPercentual.toFixed(2)}% sobre o valor de venda`;
+        }
+
+        // Formatar valor para padrão brasileiro
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Limpar todos os campos
+        function limparTudo() {
+            document.getElementById('nomeProduto').value = '';
+            document.getElementById('valorProduto').value = '';
+            document.getElementById('taxaCompra').value = '';
+            document.getElementById('taxaCartao').value = '';
+            document.getElementById('jurosVenda').value = '';
+            document.getElementById('parcelas').value = '1'; // Volta para 1 parcela
+            // Dispara cálculo para zerar os resultados
+            calcularTudo();
+
+            // Rola a página de volta ao topo
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Copiar relatório
+        function copiarRelatorio() {
+            const relatorio = document.getElementById('blocoRelatorio').innerText;
+            navigator.clipboard.writeText(relatorio).then(() => {
+                const btn = document.querySelector('.botao-copiar');
+                btn.innerText = 'Copiado!';
+                setTimeout(() => btn.innerText = 'Copiar', 2000);
+            }).catch(() => {
+                alert('Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.');
+            });
+        }
+    </script>
+</body>
+</html>
