@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Juros</title>
+    <style>
+        /* Variáveis de Cores - Tema Claro (Padrão) */
+        :root {
+            --cor-fundo: #f0f4f8;
+            --cor-container: #ffffff;
+            --cor-texto: #2d3748;
+            --cor-texto-secundario: #4a5568;
+            --cor-texto-destaque: #1a202c;
+            --cor-borda: #cbd5e0;
+            --cor-destaque: #3182ce;
+            --cor-destaque-escuro: #2b6cb0;
+            --cor-fundo-resultado: #f7fafc;
+            --cor-sombra: rgba(0,0,0,0.1);
+        }
+
+        /* Variáveis de Cores - Tema Escuro */
+        .tema-escuro {
+            --cor-fundo: #121212;
+            --cor-container: #1e1e1e;
+            --cor-texto: #f1f1f1;
+            --cor-texto-secundario: #e0e0e0;
+            --cor-texto-destaque: #ffffff;
+            --cor-borda: #444444;
+            --cor-destaque: #5dade2;
+            --cor-destaque-escuro: #3498db;
+            --cor-fundo-resultado: #2a2a2a;
+            --cor-sombra: rgba(255,255,255,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.3s, color 0.3s; /* Transição suave entre temas */
+        }
+
+        body {
+            background-color: var(--cor-fundo);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        .container {
+            background-color: var(--cor-container);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--cor-sombra);
+            width: 100%;
+            max-width: 450px;
+            position: relative;
+        }
+
+        /* Botão de Alternar Tema */
+        .botao-tema {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 7px 12px;
+            background-color: var(--cor-destaque);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .botao-tema:hover {
+            background-color: var(--cor-destaque-escuro);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--cor-texto);
+            margin-bottom: 25px;
+            font-size: 22px;
+            margin-top: 25px; /* Espaço para o botão de tema */
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--cor-texto-secundario);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--cor-borda);
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+            background-color: var(--cor-container);
+            color: var(--cor-texto);
+        }
+
+        input:focus {
+            border-color: var(--cor-destaque);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--cor-destaque);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--cor-destaque-escuro);
+        }
+
+        .resultados {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: var(--cor-fundo-resultado);
+            border-radius: 6px;
+            display: none;
+        }
+
+        .resultado-item {
+            margin-bottom: 10px;
+            color: var(--cor-texto);
+        }
+
+        .resultado-item strong {
+            color: var(--cor-texto-destaque);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Botão de Alternar Tema -->
+        <button class="botao-tema" id="alternarTema">
+            🌙 Tema Escuro
+        </button>
+
+        <h1>Calculadora de Juros</h1>
+
+        <div class="form-group">
+            <label for="valorParcela">Valor da Parcela (R$)</label>
+            <input type="number" id="valorParcela" step="0.01" placeholder="Ex: 1000.00" required>
+        </div>
+
+        <div class="form-group">
+            <label for="dataInicial">Data Inicial</label>
+            <input type="date" id="dataInicial" required>
+        </div>
+
+        <div class="form-group">
+            <label for="dataFinal">Data Final</label>
+            <input type="date" id="dataFinal" required>
+        </div>
+
+        <div class="form-group">
+            <label for="taxaJuros">Taxa de Juros (%)</label>
+            <input type="number" id="taxaJuros" step="0.01" placeholder="Ex: 2.50" required>
+        </div>
+
+        <button onclick="calcularJuros()">Calcular</button>
+
+        <div class="resultados" id="resultados">
+            <div class="resultado-item">
+                Quantidade de dias: <strong id="qtdDias"></strong>
+            </div>
+            <div class="resultado-item">
+                Taxa efetiva (%): <strong id="taxaEfetiva"></strong>
+            </div>
+            <div class="resultado-item">
+                Valor dos Juros (R$): <strong id="valorJuros"></strong>
+            </div>
+            <div class="resultado-item">
+                Valor Total (R$): <strong id="valorTotal"></strong>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const botaoAlternarTema = document.getElementById('alternarTema');
+        const corpoPagina = document.body;
+
+        // Verifica se já existe tema salvo
+        if (localStorage.getItem('temaCalculadoraJuros') === 'escuro') {
+            corpoPagina.classList.add('tema-escuro');
+            botaoAlternarTema.innerHTML = '☀️ Tema Claro';
+        }
+
+        // Função para alternar tema
+        botaoAlternarTema.addEventListener('click', () => {
+            corpoPagina.classList.toggle('tema-escuro');
+            
+            if (corpoPagina.classList.contains('tema-escuro')) {
+                localStorage.setItem('temaCalculadoraJuros', 'escuro');
+                botaoAlternarTema.innerHTML = '☀️ Tema Claro';
+            } else {
+                localStorage.setItem('temaCalculadoraJuros', 'claro');
+                botaoAlternarTema.innerHTML = '🌙 Tema Escuro';
+            }
+        });
+
+        function calcularJuros() {
+            // Obter valores dos campos
+            const valorParcela = parseFloat(document.getElementById('valorParcela').value);
+            const dataInicial = new Date(document.getElementById('dataInicial').value);
+            const dataFinal = new Date(document.getElementById('dataFinal').value);
+            const taxaJuros = parseFloat(document.getElementById('taxaJuros').value);
+
+            // Validar dados
+            if (isNaN(valorParcela) || isNaN(taxaJuros) || isNaN(dataInicial.getTime()) || isNaN(dataFinal.getTime())) {
+                alert('Preencha todos os campos corretamente!');
+                return;
+            }
+
+            if (dataFinal < dataInicial) {
+                alert('A data final não pode ser menor que a data inicial!');
+                return;
+            }
+
+            // Calcular quantidade de dias entre as datas
+            const diferencaMs = dataFinal - dataInicial;
+            const qtdDias = Math.ceil(diferencaMs / (1000 * 60 * 60 * 24));
+
+            // Cálculo conforme solicitado: (taxa / 30) * dias
+            const taxaEfetiva = (taxaJuros / 30) * qtdDias;
+
+            // Calcular valor dos juros e valor total
+            const valorJuros = valorParcela * (taxaEfetiva / 100);
+            const valorTotal = valorParcela + valorJuros;
+
+            // Exibir resultados
+            document.getElementById('qtdDias').textContent = qtdDias;
+            document.getElementById('taxaEfetiva').textContent = taxaEfetiva.toFixed(2) + '%';
+            document.getElementById('valorJuros').textContent = valorJuros.toFixed(2);
+            document.getElementById('valorTotal').textContent = valorTotal.toFixed(2);
+
+            document.getElementById('resultados').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
