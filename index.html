@@ -53,8 +53,14 @@
   .kpi .value{font-size:1.35rem;font-weight:700;margin-top:.45rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .kpi .sub{font-size:.73rem;color:var(--ink-soft);margin-top:.15rem}
   .kpi.debt .value{color:var(--debt)} .kpi.paid .value{color:var(--paid)} .kpi.brand .value{color:var(--brand-dk)}
+  .kpi.danger .value{color:var(--debt)} .kpi.warn .value{color:var(--pending)}
+  .kpi.danger{border-color:#f3c3cb} .kpi.warn{border-color:#f0dcb0}
+  .kpi.clickable{cursor:pointer;transition:.15s}
+  .kpi.clickable:hover{box-shadow:0 6px 18px -8px rgba(16,40,70,.3);transform:translateY(-1px)}
   .kpi .dot{width:8px;height:8px;border-radius:50%}
   .dot.debt{background:var(--debt)} .dot.paid{background:var(--paid)} .dot.total{background:var(--brand)} .dot.count{background:var(--ink-soft)}
+  .dot.danger{background:var(--debt)} .dot.warn{background:var(--pending)}
+  html[data-theme="dark"] .kpi.danger{border-color:#5a2730} html[data-theme="dark"] .kpi.warn{border-color:#544827}
 
   .toolbar{display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;padding:1rem clamp(1rem,3vw,2rem);border-bottom:1px solid var(--line)}
   .search{position:relative;flex:1 1 320px;min-width:200px}
@@ -105,6 +111,83 @@
     padding:.35rem .55rem;border-radius:8px;display:inline-flex;gap:.3rem;align-items:center;transition:.15s;white-space:nowrap}
   .open-link:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
   .row-actions{display:flex;gap:.4rem;align-items:center}
+  .det-btn{border:1px solid var(--line);background:var(--paper);color:var(--brand);padding:.4rem .7rem;
+    border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap}
+  .det-btn:hover{border-color:var(--brand);background:var(--chip)}
+
+  .meta-chips{display:flex;gap:.35rem;margin-top:.35rem;flex-wrap:wrap}
+  .dia-chip,.parc-chip{font-size:.68rem;font-weight:600;padding:.12rem .5rem;border-radius:999px;
+    background:var(--chip);color:var(--brand-dk);white-space:nowrap}
+  .parc-chip.muted{background:var(--line-soft);color:var(--ink-soft)}
+  .venc-chip{font-size:.68rem;font-weight:700;padding:.12rem .5rem;border-radius:999px;white-space:nowrap}
+  .venc-chip.atraso{background:#fdeef0;color:var(--debt)}
+  .venc-chip.hoje{background:#fdf4e6;color:var(--pending)}
+  html[data-theme="dark"] .venc-chip.atraso{background:#3a1f25} html[data-theme="dark"] .venc-chip.hoje{background:#3a2e1a}
+
+  .modal-lg{max-width:520px}
+  .det-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem}
+  .parc-summary{display:flex;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap}
+  .parc-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:11px;padding:.6rem .7rem;text-align:center;background:var(--surface-3)}
+  .parc-box .pn{font-size:1.3rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .parc-box .pl{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-weight:600;margin-top:.15rem}
+  .parc-box.paid .pn{color:var(--paid)} .parc-box.left .pn{color:var(--pending)} .parc-box.tot .pn{color:var(--brand-dk)}
+
+  .hist-head{display:flex;align-items:center;justify-content:space-between;font-size:.82rem;font-weight:700;
+    margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--line)}
+  .hist-count{background:var(--chip);color:var(--brand-dk);font-size:.72rem;padding:.1rem .55rem;border-radius:999px}
+  .hist-list{display:flex;flex-direction:column;gap:.5rem;max-height:240px;overflow-y:auto}
+  .hist-item{display:flex;align-items:flex-start;gap:.7rem;border:1px solid var(--line);border-radius:11px;padding:.6rem .75rem;background:var(--surface-3)}
+  .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hist-item .hi-mid{flex:1;min-width:0}
+  .hist-item .hi-date{font-size:.78rem;color:var(--ink-soft);font-weight:600}
+  .hist-item .hi-obs{font-size:.82rem;margin-top:.15rem;word-break:break-word}
+  .hist-item .hi-del{border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;padding:.1rem .3rem;border-radius:6px;line-height:1}
+  .hist-item .hi-del:hover{color:var(--debt);background:var(--line-soft)}
+  .hist-empty{text-align:center;color:var(--ink-soft);font-size:.85rem;padding:1.5rem 0}
+
+  /* ---- editar compra ---- */
+  .sec-title{font-size:.85rem;font-weight:700;margin:.3rem 0 .8rem;padding-top:.3rem;color:var(--ink)}
+  .rotina-opts{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem}
+  .rotina-opts button{border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
+    padding:.55rem .3rem;border-radius:9px;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s}
+  .rotina-opts button:hover{border-color:var(--brand);color:var(--brand)}
+  .rotina-opts button.active{background:var(--brand-dk);border-color:var(--brand-dk);color:#fff}
+  .btn-gen{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:.7rem 1rem;border-radius:11px;
+    font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;height:fit-content}
+  .btn-gen:hover{background:var(--brand-dk);border-color:var(--brand-dk)}
+  .parc-hint{font-size:.78rem;color:var(--ink-soft);margin-bottom:1rem;line-height:1.4}
+  .parc-hint.warn{color:var(--pending)}
+
+  .venc-block{margin-bottom:1.2rem}
+  .venc-list{display:flex;flex-direction:column;gap:.4rem;max-height:200px;overflow-y:auto}
+  .venc-item{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);border-radius:10px;
+    padding:.5rem .7rem;background:var(--surface-3);font-size:.84rem}
+  .venc-item .vi-n{width:24px;height:24px;border-radius:50%;background:var(--chip);color:var(--brand-dk);
+    display:grid;place-items:center;font-size:.72rem;font-weight:700;flex-shrink:0}
+  .venc-item .vi-date{font-weight:600;font-variant-numeric:tabular-nums}
+  .venc-item .vi-date input{border:1px solid var(--line);background:var(--input-bg);color:var(--ink);
+    border-radius:7px;padding:.3rem .5rem;font-size:.82rem;width:120px;text-align:center;font-variant-numeric:tabular-nums}
+  .venc-item .vi-val{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-soft);font-weight:600}
+  .venc-item .vi-tag{font-size:.66rem;font-weight:700;padding:.12rem .45rem;border-radius:999px;white-space:nowrap}
+  .vi-tag.paga{background:#e8f6ee;color:var(--paid)}
+  .vi-tag.venc{background:#fdeef0;color:var(--debt)}
+  .vi-tag.hoje{background:#fdf4e6;color:var(--pending)}
+  html[data-theme="dark"] .vi-tag.paga{background:#1c3528} html[data-theme="dark"] .vi-tag.venc{background:#3a1f25} html[data-theme="dark"] .vi-tag.hoje{background:#3a2e1a}
+
+  /* ---- opções de restaurar ---- */
+  .rest-opt{display:flex;gap:.9rem;align-items:flex-start;border:1px solid var(--line);border-radius:13px;
+    padding:.9rem 1rem;cursor:pointer;transition:.15s;margin-bottom:.7rem;background:var(--surface-3)}
+  .rest-opt:hover{border-color:var(--brand);background:var(--chip)}
+  .rest-ic{font-size:1.3rem;flex-shrink:0;width:38px;height:38px;border-radius:10px;background:var(--paper);
+    border:1px solid var(--line);display:grid;place-items:center}
+  .rest-txt{display:flex;flex-direction:column;gap:.2rem}
+  .rest-txt b{font-size:.92rem}
+  .rest-txt span{font-size:.8rem;color:var(--ink-soft);line-height:1.4}
+  .rest-preview{margin-top:.6rem;font-size:.82rem;color:var(--ink-soft);max-height:160px;overflow-y:auto}
+  .rest-preview .pv-ok{color:var(--paid);font-weight:600}
+  .rest-preview table{min-width:0;width:100%;font-size:.76rem;margin-top:.5rem}
+  .rest-preview th,.rest-preview td{text-align:left;padding:.3rem .4rem;border-bottom:1px solid var(--line-soft)}
+  .rest-confirm-bar{display:flex;gap:.6rem;margin-top:.9rem;justify-content:flex-end}
 
   .empty{text-align:center;padding:3rem 1rem;color:var(--ink-soft)}
 
@@ -205,7 +288,57 @@
   html[data-theme="dark"] .sync.off{background:#3a2e1a;border-color:#544827}
   html[data-theme="dark"] .sync.syncing{background:#19283a;border-color:#2a4763}
 
-  @media (max-width:640px){header{align-items:flex-start}.kpi .value{font-size:1.15rem}.modal-stats{flex-direction:column}}
+  /* ===== RESPONSIVO: vira cartões no celular ===== */
+  @media (max-width:760px){
+    body{padding:.5rem .4rem 3rem}
+    .shell{border-radius:16px}
+    header{padding:1.1rem 1rem 1rem}
+    .kpis{grid-template-columns:1fr 1fr;gap:.6rem;padding:1rem}
+    .kpi{padding:.7rem .8rem} .kpi .value{font-size:1.05rem}
+    .toolbar{padding:.8rem 1rem}
+    .filters{width:100%}
+    .filters .chip-btn{flex:1;text-align:center;padding:.5rem .4rem}
+
+    /* esconde o cabeçalho da tabela */
+    .table-wrap{overflow:visible}
+    table{min-width:0;display:block}
+    thead{display:none}
+    tbody{display:block}
+    tbody tr{display:block;border:1px solid var(--line);border-radius:14px;margin:0 1rem .8rem;
+      padding:.4rem .2rem;background:var(--paper);box-shadow:0 2px 8px -4px rgba(16,40,70,.12)}
+    tbody tr:hover td{background:transparent}
+    tbody td{display:flex;justify-content:space-between;align-items:center;gap:1rem;
+      padding:.5rem .9rem;border:none;border-bottom:1px solid var(--line-soft);text-align:right}
+    tbody td:last-child{border-bottom:none}
+    /* rótulo antes de cada célula */
+    tbody td::before{content:attr(data-label);font-size:.72rem;font-weight:700;color:var(--ink-soft);
+      text-transform:uppercase;letter-spacing:.03em;text-align:left;flex-shrink:0}
+    tbody td.num{display:none}            /* nº da linha não importa no card */
+    tbody td.name{font-size:1rem;justify-content:flex-start;background:var(--surface-2);
+      border-radius:10px;margin:.2rem .4rem .3rem;padding:.6rem .9rem}
+    tbody td.name::before{display:none}
+    .meta-chips{margin-top:.3rem}
+    tbody td .bar{min-width:90px}
+    .row-actions{justify-content:flex-end;flex-wrap:wrap}
+    .row-actions .pay-btn,.row-actions .det-btn{flex:1;min-width:120px;text-align:center;justify-content:center;padding:.6rem}
+    .empty{display:block!important}
+
+    /* modais ocupam quase a tela toda */
+    .overlay{padding:.5rem;align-items:flex-end}
+    .modal{max-width:100%;border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto}
+    .modal-lg{max-width:100%}
+    .det-grid{grid-template-columns:1fr 1fr}
+    .modal-stats{flex-direction:row}
+  }
+  @media (max-width:420px){
+    .kpis{grid-template-columns:1fr}
+    .modal-stats{flex-direction:column}
+    .parc-summary{flex-direction:row}
+    .parc-box{min-width:0;padding:.5rem .3rem}
+    .parc-box .pn{font-size:1.1rem}
+  }
+
+  @media (max-width:640px){.modal-stats{}}
 </style>
 </head>
 <body>
@@ -273,6 +406,7 @@
   <footer>
     <div><b id="visible-count">0</b> de <b id="total-count">0</b> fichas exibidas</div>
     <div class="right">
+      <button class="btn-ghost" id="restore">Restaurar CSV</button>
       <button class="btn-ghost" id="reset">Desfazer pagamentos</button>
       <button class="btn-export" id="export">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
@@ -298,6 +432,10 @@
         <label for="m-amount">Valor do pagamento</label>
         <div class="input-money"><span>R$</span><input id="m-amount" type="text" inputmode="decimal" placeholder="0,00"></div>
         <div class="quick" id="m-quick"></div>
+      </div>
+      <div class="field" style="margin-top:1rem">
+        <label for="m-obs">Observação <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label>
+        <input id="m-obs" type="text" placeholder="Ex: pago em dinheiro, parcela 3…" style="padding-left:.9rem;font-size:.92rem;font-weight:500">
         <div class="err" id="m-err"></div>
       </div>
     </div>
@@ -309,6 +447,100 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- modal de detalhamento -->
+<div class="overlay" id="det-overlay">
+  <div class="modal modal-lg" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>Detalhamento da ficha</h3>
+      <div class="client" id="d-client">—</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats">
+        <div class="mstat paid"><div class="l">Já pago</div><div class="v" id="d-paid">—</div></div>
+        <div class="mstat debt"><div class="l">Falta pagar</div><div class="v" id="d-debt">—</div></div>
+      </div>
+
+      <div class="sec-title">📅 Editar compra (parcelas e vencimentos)</div>
+      <div class="det-grid">
+        <div class="field">
+          <label for="d-primeira">Data do 1º pagamento</label>
+          <input id="d-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+        </div>
+        <div class="field">
+          <label for="d-parcelas">Nº de parcelas</label>
+          <input id="d-parcelas" type="text" inputmode="numeric" placeholder="ex: 12" maxlength="3" style="padding-left:.9rem;text-align:center;font-size:1rem">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:.8rem">
+        <label>Rotina de pagamento</label>
+        <div class="rotina-opts" id="d-rotina">
+          <button type="button" data-rot="semanal">Semanal</button>
+          <button type="button" data-rot="quinzenal">Quinzenal</button>
+          <button type="button" data-rot="mensal">Mensal</button>
+          <button type="button" data-rot="manual">Manual</button>
+        </div>
+      </div>
+      <div class="det-grid" style="grid-template-columns:1fr auto;align-items:end;gap:.7rem;margin-bottom:.4rem">
+        <div class="field" style="margin:0">
+          <label for="d-dia">Dia de pagamento (resumo)</label>
+          <input id="d-dia" type="text" inputmode="numeric" placeholder="auto" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+        </div>
+        <button class="btn-gen" id="d-gen">Gerar vencimentos</button>
+      </div>
+      <div class="parc-hint" id="d-parc-hint"></div>
+
+      <div class="parc-summary" id="d-parc-summary"></div>
+
+      <div class="venc-block" id="d-venc-block" style="display:none">
+        <div class="hist-head"><span>Vencimentos das parcelas</span><span id="d-venc-count" class="hist-count">0</span></div>
+        <div class="venc-list" id="d-venc-list"></div>
+      </div>
+
+      <div class="hist-head">
+        <span>Histórico de pagamentos</span>
+        <span id="d-hist-count" class="hist-count">0</span>
+      </div>
+      <div class="hist-list" id="d-hist"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="d-close">Fechar</button>
+      <button class="btn-confirm" id="d-save">Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal restaurar CSV -->
+<div class="overlay" id="rest-overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>Restaurar / Importar CSV</h3>
+      <div class="client">Escolha o que deseja fazer</div>
+    </div>
+    <div class="modal-body">
+      <div class="rest-opt" id="rest-opt-original">
+        <div class="rest-ic">↺</div>
+        <div class="rest-txt">
+          <b>Voltar aos valores originais</b>
+          <span>Desfaz todos os pagamentos, dias e parcelas, voltando aos 275 registros originais do CSV.</span>
+        </div>
+      </div>
+      <div class="rest-opt" id="rest-opt-file">
+        <div class="rest-ic">⬆️</div>
+        <div class="rest-txt">
+          <b>Carregar um arquivo CSV</b>
+          <span>Importa um CSV do seu computador. Útil quando você tiver um arquivo mais completo (com parcelas e vencimentos).</span>
+        </div>
+      </div>
+      <input type="file" id="rest-file" accept=".csv,text/csv" style="display:none">
+      <div class="err" id="rest-err"></div>
+      <div class="rest-preview" id="rest-preview"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="rest-close">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -745,9 +977,81 @@
     };
   });
 
+  // ---------- estrutura de dados por ficha ----------
+  // payments[key] = {
+  //   pagos:[{valor,data,obs}], dia:"10", parcelas:0,
+  //   primeira:"10/03/2026",  // data do 1º pagamento
+  //   rotina:"mensal",        // semanal | quinzenal | mensal | manual
+  //   vencimentos:["10/03/2026", ...] // datas geradas (ou manuais)
+  // }
+  function normEntry(raw) {
+    if (raw == null) return { pagos: [], dia: "", parcelas: 0, primeira: "", rotina: "mensal", vencimentos: [] };
+    if (typeof raw === "number") {
+      return { pagos: raw > 0 ? [{ valor: raw, data: "", obs: "" }] : [], dia: "", parcelas: 0, primeira: "", rotina: "mensal", vencimentos: [] };
+    }
+    return {
+      pagos: Array.isArray(raw.pagos) ? raw.pagos : [],
+      dia: raw.dia || "",
+      parcelas: Number(raw.parcelas) || 0,
+      primeira: raw.primeira || "",
+      rotina: raw.rotina || "mensal",
+      vencimentos: Array.isArray(raw.vencimentos) ? raw.vencimentos : []
+    };
+  }
+  function entryFor(key) {
+    const e = normEntry(payments[key]);
+    payments[key] = e; // normaliza in-place
+    return e;
+  }
+  function totalPagoExtra(key) {
+    return normEntry(payments[key]).pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+  }
+
+  // ===== motor de datas de vencimento =====
+  function parseDateBR(s) {
+    if (!s) return null;
+    const [d, m, y] = String(s).split("/").map(Number);
+    if (!d || !m || !y) return null;
+    const dt = new Date(y, m - 1, d);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+  function fmtDateBR(dt) {
+    return String(dt.getDate()).padStart(2, "0") + "/" +
+           String(dt.getMonth() + 1).padStart(2, "0") + "/" + dt.getFullYear();
+  }
+  function addMonthsClamp(dt, n, anchorDay) {
+    const target = new Date(dt.getFullYear(), dt.getMonth() + n, 1);
+    const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(anchorDay, lastDay));
+    return target;
+  }
+  function generateDueDates(firstDateStr, rotina, parcelas) {
+    const first = parseDateBR(firstDateStr);
+    if (!first || parcelas < 1) return [];
+    const out = [];
+    const anchorDay = first.getDate();
+    for (let i = 0; i < parcelas; i++) {
+      let dt;
+      if (rotina === "semanal") dt = new Date(first.getTime() + i * 7 * 86400000);
+      else if (rotina === "quinzenal") dt = new Date(first.getTime() + i * 14 * 86400000);
+      else if (rotina === "mensal") dt = addMonthsClamp(first, i, anchorDay);
+      else dt = (i === 0) ? first : null; // manual: só a 1ª é fixada
+      out.push(dt ? fmtDateBR(dt) : "");
+    }
+    return out;
+  }
+  function hojeMeiaNoite() {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  function mesmoDia(a, b) {
+    return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
   // calcula estado atual aplicando pagamentos extras
   function compute(b) {
-    const extra = payments[b.key] || 0;
+    const e = normEntry(payments[b.key]);
+    const extra = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
     let recebido = b.recebidoOrig + extra;
     let saldo = Math.max(0, b.saldoOrig - extra);
     if (recebido > b.total) recebido = b.total;
@@ -756,7 +1060,39 @@
     if (saldo <= 0.005) status = "settled";
     else if (recebido > 0.005) status = "partial";
     else status = "open";
-    return { ...b, recebido, saldo, pct, status, edited: extra > 0.005 };
+    const parcelasPagas = e.pagos.length;             // cada pagamento = 1 parcela
+    const parcelasTotal = e.parcelas || 0;
+    const parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
+
+    // ----- análise de vencimentos -----
+    // valor sugerido por parcela = saldo devedor original / parcelas
+    const valorParcela = parcelasTotal > 0 ? (b.saldoOrig / parcelasTotal) : 0;
+    const venc = e.vencimentos || [];
+    const hoje = hojeMeiaNoite();
+    let vencidoValor = 0, venceHojeValor = 0, proxData = "", proxValor = 0;
+    let primeiraEmAberto = -1;
+    if (status !== "settled" && parcelasTotal > 0) {
+      for (let i = 0; i < parcelasTotal; i++) {
+        const paga = i < parcelasPagas;          // parcelas pagas = as primeiras N (ordem de pagamento)
+        if (paga) continue;
+        if (primeiraEmAberto < 0) primeiraEmAberto = i;
+        const ds = venc[i] || "";
+        const dt = parseDateBR(ds);
+        if (!dt) continue;
+        if (dt < hoje) vencidoValor += valorParcela;
+        else if (mesmoDia(dt, hoje)) venceHojeValor += valorParcela;
+        if (!proxData && dt >= hoje) { proxData = ds; proxValor = valorParcela; }
+      }
+    }
+
+    return {
+      ...b, recebido, saldo, pct, status,
+      edited: extra > 0.005,
+      dia: e.dia, parcelasTotal, parcelasPagas, parcelasFaltam,
+      pagos: e.pagos,
+      primeira: e.primeira, rotina: e.rotina, vencimentos: venc,
+      valorParcela, vencidoValor, venceHojeValor, proxData, proxValor
+    };
   }
   function rows() { return base.map(compute); }
 
@@ -774,6 +1110,8 @@
       if (state.filter === "open" && r.status !== "open") return false;
       if (state.filter === "partial" && r.status !== "partial") return false;
       if (state.filter === "settled" && r.status !== "settled") return false;
+      if (state.filter === "vencido" && !((r.vencidoValor || 0) > 0.005)) return false;
+      if (state.filter === "hoje" && !((r.venceHojeValor || 0) > 0.005)) return false;
       return true;
     });
     const dir = state.sortDir === "asc" ? 1 : -1;
@@ -800,20 +1138,30 @@
       const frag = document.createDocumentFragment();
       data.forEach((r, i) => {
         const tr = document.createElement("tr");
+        const parcInfo = r.parcelasTotal > 0
+          ? '<span class="parc-chip" title="Parcelas pagas / total">' + r.parcelasPagas + '/' + r.parcelasTotal + '</span>'
+          : (r.parcelasPagas > 0 ? '<span class="parc-chip muted" title="Pagamentos feitos">' + r.parcelasPagas + 'x</span>' : '');
+        const diaInfo = r.dia ? '<span class="dia-chip" title="Dia de pagamento">dia ' + escapeHtml(r.dia) + '</span>' : '';
+        const vencInfo = (r.vencidoValor > 0.005)
+          ? '<span class="venc-chip atraso" title="Parcela em atraso">⚠ vencido</span>'
+          : ((r.venceHojeValor > 0.005) ? '<span class="venc-chip hoje" title="Vence hoje">● vence hoje</span>' : '');
         tr.innerHTML =
           '<td class="num">' + (i + 1) + '</td>' +
-          '<td class="name">' + escapeHtml(r.nome) + (r.edited ? '<span class="edited-flag">• editado</span>' : '') + '</td>' +
-          '<td><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
-          '<td class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
-          '<td class="money paid">' + fmtBRL.format(r.recebido) + '</td>' +
-          '<td class="money muted">' + fmtBRL.format(r.total) + '</td>' +
-          '<td><div class="bar"><span style="width:' + r.pct + '%"></span></div><span class="pct">' + r.pct + '% pago</span></td>' +
-          '<td class="date">' + (r.data || "—") + '</td>' +
-          '<td><div class="row-actions">' +
+          '<td class="name">' + escapeHtml(r.nome) +
+            (r.edited ? '<span class="edited-flag">• editado</span>' : '') +
+            ((diaInfo || parcInfo || vencInfo) ? '<div class="meta-chips">' + vencInfo + diaInfo + parcInfo + '</div>' : '') +
+          '</td>' +
+          '<td data-label="Status"><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
+          '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
+          '<td data-label="Já pago" class="money paid">' + fmtBRL.format(r.recebido) + '</td>' +
+          '<td data-label="Total" class="money muted">' + fmtBRL.format(r.total) + '</td>' +
+          '<td data-label="Progresso"><div class="bar"><span style="width:' + r.pct + '%"></span></div><span class="pct">' + r.pct + '% pago</span></td>' +
+          '<td data-label="Criado em" class="date">' + (r.data || "—") + '</td>' +
+          '<td data-label="Ações"><div class="row-actions">' +
             (r.status === "settled"
               ? '<button class="pay-btn settled" disabled>✓ Quitado</button>'
               : '<button class="pay-btn" data-key="' + r.key + '">+ Pagamento</button>') +
-            (r.link ? '<a class="open-link" href="' + r.link + '" target="_blank" rel="noopener">Ficha ↗</a>' : '') +
+            '<button class="det-btn" data-key="' + r.key + '">Detalhes</button>' +
           '</div></td>';
         frag.appendChild(tr);
       });
@@ -833,14 +1181,23 @@
     const totalGross = all.reduce((s, r) => s + r.total, 0);
     const openCount = all.filter(r => r.status !== "settled").length;
     const settledCount = all.length - openCount;
+    // vencidos e vence hoje (com base nas parcelas geradas)
+    const vencidoTotal = all.reduce((s, r) => s + (r.vencidoValor || 0), 0);
+    const vencidoFichas = all.filter(r => (r.vencidoValor || 0) > 0.005).length;
+    const hojeTotal = all.reduce((s, r) => s + (r.venceHojeValor || 0), 0);
+    const hojeFichas = all.filter(r => (r.venceHojeValor || 0) > 0.005).length;
+
     const kpis = [
+      { cls: "danger", dot: "danger", label: "Vencido (em atraso)", value: fmtBRL.format(vencidoTotal), sub: vencidoFichas + " ficha(s) com parcela atrasada", filter: "vencido" },
+      { cls: "warn", dot: "warn", label: "Vence hoje", value: fmtBRL.format(hojeTotal), sub: hojeFichas + " parcela(s) para receber hoje", filter: "hoje" },
       { cls: "debt", dot: "debt", label: "Falta receber", value: fmtBRL.format(totalDebt), sub: openCount + " fichas em aberto" },
       { cls: "paid", dot: "paid", label: "Já recebido", value: fmtBRL.format(totalPaid), sub: (totalGross ? Math.round((totalPaid / totalGross) * 100) : 0) + "% do total" },
       { cls: "brand", dot: "total", label: "Total faturado", value: fmtBRL.format(totalGross), sub: "fiados + recebidos" },
       { cls: "", dot: "count", label: "Clientes / fichas", value: String(all.length), sub: openCount + " a cobrar · " + settledCount + " quitadas" }
     ];
     document.getElementById("kpis").innerHTML = kpis.map(k =>
-      '<div class="kpi ' + k.cls + '"><div class="label"><span class="dot ' + k.dot + '"></span>' + k.label + '</div>' +
+      '<div class="kpi ' + k.cls + (k.filter ? ' clickable' : '') + '"' + (k.filter ? ' data-kpi="' + k.filter + '"' : '') + '>' +
+      '<div class="label"><span class="dot ' + k.dot + '"></span>' + k.label + '</div>' +
       '<div class="value">' + k.value + '</div><div class="sub">' + k.sub + '</div></div>'
     ).join("");
   }
@@ -884,15 +1241,34 @@
     render();
   });
 
+  // clicar nos cartões "Vencido" / "Vence hoje" filtra a lista
+  document.getElementById("kpis").addEventListener("click", e => {
+    const card = e.target.closest(".kpi.clickable");
+    if (!card) return;
+    const f = card.dataset.kpi; // "vencido" ou "hoje"
+    state.filter = f;
+    document.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("active"));
+    render();
+    showToast(f === "vencido" ? "Mostrando fichas com parcela atrasada." : "Mostrando parcelas que vencem hoje.");
+    document.querySelector(".table-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   // ---------- modal de pagamento ----------
   const overlay = document.getElementById("overlay");
   const mClient = document.getElementById("m-client");
   const mPaid = document.getElementById("m-paid");
   const mDebt = document.getElementById("m-debt");
   const mAmount = document.getElementById("m-amount");
+  const mObs = document.getElementById("m-obs");
   const mErr = document.getElementById("m-err");
   const mQuick = document.getElementById("m-quick");
   let activeKey = null;
+
+  function hojeBR() {
+    const d = new Date();
+    return String(d.getDate()).padStart(2, "0") + "/" +
+           String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+  }
 
   function openModal(key) {
     const b = base.find(x => x.key === key);
@@ -903,8 +1279,8 @@
     mPaid.textContent = fmtBRL.format(r.recebido);
     mDebt.textContent = fmtBRL.format(r.saldo);
     mAmount.value = "";
+    mObs.value = "";
     mErr.textContent = "";
-    // botões de valor rápido
     const half = Math.round((r.saldo / 2) * 100) / 100;
     mQuick.innerHTML =
       '<button data-v="' + half + '">Metade (' + fmtBRL.format(half) + ')</button>' +
@@ -932,7 +1308,8 @@
       mErr.textContent = "Valor maior que o saldo devedor (" + fmtBRL.format(r.saldo) + ").";
       return;
     }
-    payments[activeKey] = (payments[activeKey] || 0) + val;
+    const e = entryFor(activeKey);
+    e.pagos.push({ valor: val, data: hojeBR(), obs: (mObs.value || "").trim() });
     persist();
     closeModal();
     render();
@@ -942,13 +1319,357 @@
   document.getElementById("m-confirm").addEventListener("click", confirmPayment);
   document.getElementById("m-cancel").addEventListener("click", closeModal);
   overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
-  mAmount.addEventListener("keydown", e => { if (e.key === "Enter") confirmPayment(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && overlay.classList.contains("show")) closeModal(); });
+  mAmount.addEventListener("keydown", e => { if (e.key === "Enter") mObs.focus(); });
+  mObs.addEventListener("keydown", e => { if (e.key === "Enter") confirmPayment(); });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (overlay.classList.contains("show")) closeModal();
+    if (detOverlay.classList.contains("show")) closeDetails();
+    const ro = document.getElementById("rest-overlay");
+    if (ro && ro.classList.contains("show")) ro.classList.remove("show");
+  });
 
   tbody.addEventListener("click", e => {
-    const btn = e.target.closest(".pay-btn");
-    if (btn && !btn.disabled) openModal(btn.dataset.key);
+    const payBtn = e.target.closest(".pay-btn");
+    if (payBtn && !payBtn.disabled) { openModal(payBtn.dataset.key); return; }
+    const detBtn = e.target.closest(".det-btn");
+    if (detBtn) { openDetails(detBtn.dataset.key); return; }
   });
+
+  // ---------- modal de DETALHES ----------
+  const detOverlay = document.getElementById("det-overlay");
+  const dClient = document.getElementById("d-client");
+  const dPaid = document.getElementById("d-paid");
+  const dDebt = document.getElementById("d-debt");
+  const dDia = document.getElementById("d-dia");
+  const dPrimeira = document.getElementById("d-primeira");
+  const dParcelas = document.getElementById("d-parcelas");
+  const dRotina = document.getElementById("d-rotina");
+  const dGen = document.getElementById("d-gen");
+  const dParcHint = document.getElementById("d-parc-hint");
+  const dParcSummary = document.getElementById("d-parc-summary");
+  const dVencBlock = document.getElementById("d-venc-block");
+  const dVencList = document.getElementById("d-venc-list");
+  const dVencCount = document.getElementById("d-venc-count");
+  const dHist = document.getElementById("d-hist");
+  const dHistCount = document.getElementById("d-hist-count");
+  let detKey = null;
+  let detRotina = "mensal";
+  let detVenc = [];   // datas em edição
+
+  function setRotinaUI(rot) {
+    detRotina = rot;
+    dRotina.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.rot === rot));
+  }
+
+  function renderParcSummary(r, totalOverride) {
+    const pagas = r.parcelasPagas;
+    const total = totalOverride != null ? totalOverride : r.parcelasTotal;
+    const faltam = total > 0 ? Math.max(0, total - pagas) : 0;
+    dParcSummary.innerHTML =
+      '<div class="parc-box paid"><div class="pn">' + pagas + '</div><div class="pl">Parcelas pagas</div></div>' +
+      '<div class="parc-box left"><div class="pn">' + (total > 0 ? faltam : "—") + '</div><div class="pl">Faltam</div></div>' +
+      '<div class="parc-box tot"><div class="pn">' + (total > 0 ? total : "—") + '</div><div class="pl">Total</div></div>';
+  }
+
+  function renderVencList(r) {
+    const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
+    if (total < 1 || !detVenc.length) {
+      dVencBlock.style.display = "none";
+      return;
+    }
+    dVencBlock.style.display = "block";
+    dVencCount.textContent = total;
+    const hoje = hojeMeiaNoite();
+    const valorParcela = total > 0 ? (r.saldoOrig / total) : 0;
+    let html = "";
+    for (let i = 0; i < total; i++) {
+      const paga = i < r.parcelasPagas;
+      const ds = detVenc[i] || "";
+      const dt = parseDateBR(ds);
+      let tag = "";
+      if (paga) tag = '<span class="vi-tag paga">paga</span>';
+      else if (dt && dt < hoje) tag = '<span class="vi-tag venc">vencida</span>';
+      else if (dt && mesmoDia(dt, hoje)) tag = '<span class="vi-tag hoje">hoje</span>';
+      html +=
+        '<div class="venc-item">' +
+          '<span class="vi-n">' + (i + 1) + '</span>' +
+          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"></span>' +
+          tag +
+          '<span class="vi-val">' + fmtBRL.format(valorParcela) + '</span>' +
+        '</div>';
+    }
+    dVencList.innerHTML = html;
+  }
+
+  function renderHist(r) {
+    dHistCount.textContent = r.pagos.length;
+    if (!r.pagos.length) {
+      dHist.innerHTML = '<div class="hist-empty">Nenhum pagamento registrado ainda.</div>';
+      return;
+    }
+    dHist.innerHTML = r.pagos.map((p, idx) =>
+      '<div class="hist-item">' +
+        '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
+        '<div class="hi-mid">' +
+          '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
+          (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
+        '</div>' +
+        '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
+      '</div>'
+    ).join("");
+  }
+
+  function openDetails(key) {
+    const b = base.find(x => x.key === key);
+    if (!b) return;
+    detKey = key;
+    const e = entryFor(key);
+    const r = compute(b);
+    dClient.textContent = r.nome;
+    dPaid.textContent = fmtBRL.format(r.recebido);
+    dDebt.textContent = fmtBRL.format(r.saldo);
+    dParcelas.value = e.parcelas > 0 ? String(e.parcelas) : "";
+    // data do 1º pagamento: usa a salva, ou sugere a data de criação da ficha
+    dPrimeira.value = e.primeira || b.data || "";
+    dDia.value = e.dia || "";
+    setRotinaUI(e.rotina || "mensal");
+    detVenc = (e.vencimentos || []).slice();
+    dParcHint.textContent = "";
+    dParcHint.classList.remove("warn");
+    renderParcSummary(r);
+    renderVencList(r);
+    renderHist(r);
+    detOverlay.classList.add("show");
+  }
+  function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
+
+  // escolher rotina
+  dRotina.addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    setRotinaUI(btn.dataset.rot);
+    dParcHint.textContent = btn.dataset.rot === "manual"
+      ? "Modo manual: clique em “Gerar vencimentos” e depois ajuste cada data individualmente."
+      : "Clique em “Gerar vencimentos” para criar as datas a partir do 1º pagamento.";
+    dParcHint.classList.remove("warn");
+  });
+
+  // atualiza resumo ao mudar nº de parcelas
+  dParcelas.addEventListener("input", () => {
+    const b = base.find(x => x.key === detKey);
+    if (!b) return;
+    const r = compute(b);
+    const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
+    renderParcSummary(r, total);
+  });
+
+  // gerar vencimentos
+  dGen.addEventListener("click", () => {
+    const b = base.find(x => x.key === detKey);
+    if (!b) return;
+    const r = compute(b);
+    const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
+    const primeira = (dPrimeira.value || "").trim();
+    if (total < 1) { dParcHint.textContent = "Informe o número de parcelas."; dParcHint.classList.add("warn"); return; }
+    if (!parseDateBR(primeira)) { dParcHint.textContent = "Informe a data do 1º pagamento no formato dd/mm/aaaa."; dParcHint.classList.add("warn"); return; }
+
+    if (detRotina === "manual") {
+      // mantém datas existentes, ajusta o tamanho do array; 1ª = primeira
+      const novo = [];
+      for (let i = 0; i < total; i++) novo.push(i === 0 ? primeira : (detVenc[i] || ""));
+      detVenc = novo;
+      dParcHint.textContent = "Datas prontas para edição manual — ajuste cada uma abaixo.";
+      dParcHint.classList.remove("warn");
+    } else {
+      detVenc = generateDueDates(primeira, detRotina, total);
+      const rotLabel = { semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal" }[detRotina];
+      dParcHint.textContent = total + " parcelas geradas (" + rotLabel + ") a partir de " + primeira + ". Você ainda pode editar cada data abaixo.";
+      dParcHint.classList.remove("warn");
+    }
+    // atualiza dia do mês resumo com base na 1ª data
+    const fp = parseDateBR(primeira);
+    if (fp) dDia.value = String(fp.getDate());
+    renderParcSummary(r, total);
+    renderVencList(r);
+  });
+
+  // editar uma data de vencimento manualmente
+  dVencList.addEventListener("input", e => {
+    const inp = e.target.closest("input[data-vi]");
+    if (!inp) return;
+    const i = parseInt(inp.dataset.vi);
+    detVenc[i] = inp.value.trim();
+  });
+  // re-renderiza tags ao sair do campo (pra recalcular vencida/hoje)
+  dVencList.addEventListener("change", () => {
+    const b = base.find(x => x.key === detKey);
+    if (b) renderVencList(compute(b));
+  });
+
+  function saveDetails() {
+    if (!detKey) return;
+    const e = entryFor(detKey);
+    const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
+    e.parcelas = total;
+    e.primeira = (dPrimeira.value || "").trim().replace(/[^\d/]/g, "");
+    e.rotina = detRotina;
+    e.dia = (dDia.value || "").trim().replace(/[^\d/]/g, "");
+    // guarda vencimentos do tamanho do total
+    e.vencimentos = [];
+    for (let i = 0; i < total; i++) e.vencimentos.push((detVenc[i] || "").trim());
+    persist();
+    closeDetails();
+    render();
+    showToast("Compra atualizada.");
+  }
+
+  // remover um pagamento do histórico
+  dHist.addEventListener("click", ev => {
+    const del = ev.target.closest(".hi-del");
+    if (!del || !detKey) return;
+    const idx = parseInt(del.dataset.idx);
+    const e = entryFor(detKey);
+    const p = e.pagos[idx];
+    if (!p) return;
+    if (confirm("Remover o pagamento de " + fmtBRL.format(Number(p.valor) || 0) + "? O valor voltará para o saldo devedor.")) {
+      e.pagos.splice(idx, 1);
+      persist();
+      const b = base.find(x => x.key === detKey);
+      const r = compute(b);
+      dPaid.textContent = fmtBRL.format(r.recebido);
+      dDebt.textContent = fmtBRL.format(r.saldo);
+      renderParcSummary(r);
+      renderHist(r);
+      render();
+      showToast("Pagamento removido.");
+    }
+  });
+
+  document.getElementById("d-save").addEventListener("click", saveDetails);
+  document.getElementById("d-close").addEventListener("click", closeDetails);
+  detOverlay.addEventListener("click", e => { if (e.target === detOverlay) closeDetails(); });
+
+  // ---------- modal RESTAURAR / IMPORTAR CSV ----------
+  const restOverlay = document.getElementById("rest-overlay");
+  const restErr = document.getElementById("rest-err");
+  const restPreview = document.getElementById("rest-preview");
+  const restFile = document.getElementById("rest-file");
+
+  function openRestore() {
+    restErr.textContent = "";
+    restPreview.innerHTML = "";
+    restFile.value = "";
+    restOverlay.classList.add("show");
+  }
+  function closeRestore() { restOverlay.classList.remove("show"); }
+
+  // opção 1: voltar aos valores originais
+  document.getElementById("rest-opt-original").addEventListener("click", () => {
+    let pgs = 0;
+    Object.keys(payments).forEach(k => { pgs += normEntry(payments[k]).pagos.length; });
+    const msg = "Tem certeza? Isso vai apagar TUDO que você registrou no app:\n\n" +
+      "• " + pgs + " pagamento(s) do histórico\n" +
+      "• todos os dias de pagamento e parcelas cadastrados\n\n" +
+      "Os 275 registros voltam exatamente como estavam no CSV original. Esta ação não pode ser desfeita.";
+    if (confirm(msg)) {
+      payments = {};
+      persist();
+      render();
+      closeRestore();
+      showToast("Base restaurada aos valores originais do CSV.");
+    }
+  });
+
+  // opção 2: carregar arquivo
+  document.getElementById("rest-opt-file").addEventListener("click", () => restFile.click());
+
+  // parser de CSV simples (lida com ; ou , e campos entre aspas)
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = "", inQuotes = false;
+    // detecta separador pela 1ª linha
+    const firstLine = text.split(/\r?\n/)[0] || "";
+    const sep = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i], n = text[i + 1];
+      if (inQuotes) {
+        if (c === '"' && n === '"') { field += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else { field += c; }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === sep) { row.push(field); field = ""; }
+        else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+        else if (c === "\r") { /* ignora */ }
+        else field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(c => c && c.trim() !== ""));
+  }
+
+  restFile.addEventListener("change", () => {
+    const file = restFile.files && restFile.files[0];
+    if (!file) return;
+    restErr.textContent = "";
+    restPreview.innerHTML = "Lendo arquivo…";
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const rows = parseCSV(String(reader.result));
+        if (!rows.length) { restErr.textContent = "Arquivo vazio ou ilegível."; restPreview.innerHTML = ""; return; }
+        showImportPreview(rows);
+      } catch (e) {
+        restErr.textContent = "Não consegui ler este CSV. Verifique o formato.";
+        restPreview.innerHTML = "";
+      }
+    };
+    reader.onerror = () => { restErr.textContent = "Falha ao abrir o arquivo."; restPreview.innerHTML = ""; };
+    reader.readAsText(file, "UTF-8");
+  });
+
+  // mostra prévia e botão de confirmar importação
+  function showImportPreview(rows) {
+    const head = rows[0].map(h => (h || "").toLowerCase());
+    // tenta achar a coluna do nome (2ª, ou cabeçalho "nome"/"cliente")
+    let nameIdx = head.findIndex(h => /nome|cliente/.test(h));
+    let hasHeader = nameIdx >= 0 || head.some(h => /nome|cliente|saldo|fiad|receb|total/.test(h));
+    if (nameIdx < 0) nameIdx = 1; // mesma posição do CSV original
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const sample = dataRows.slice(0, 5);
+
+    let html = '<div class="pv-ok">✓ Arquivo lido: ' + dataRows.length + ' linha(s) detectada(s).</div>';
+    html += '<div style="margin-top:.4rem">Amostra (coluna de nome destacada):</div>';
+    html += '<table><thead><tr>' + rows[0].map((h, i) =>
+      '<th>' + (i === nameIdx ? '➤ ' : '') + escapeHtml((h || "col " + i).slice(0, 18)) + '</th>'
+    ).join("") + '</tr></thead><tbody>';
+    sample.forEach(r => {
+      html += '<tr>' + r.map(c => '<td>' + escapeHtml((c || "").slice(0, 18)) + '</td>').join("") + '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '<div class="err" style="margin-top:.6rem;color:var(--pending)">⚠ Importar vai <b>substituir</b> a base atual dos 275 registros. ' +
+            'Seus pagamentos só continuam batendo se os clientes tiverem o mesmo identificador. Faça um "Baixar CSV" antes, como backup.</div>';
+    html += '<div class="rest-confirm-bar">' +
+            '<button class="btn-cancel" id="imp-cancel">Cancelar</button>' +
+            '<button class="btn-confirm" id="imp-confirm">Importar ' + dataRows.length + ' registros</button>' +
+            '</div>';
+    restPreview.innerHTML = html;
+
+    document.getElementById("imp-cancel").addEventListener("click", () => { restPreview.innerHTML = ""; restFile.value = ""; });
+    document.getElementById("imp-confirm").addEventListener("click", () => {
+      restErr.textContent = "";
+      // por segurança, não sobrescrevo automaticamente a base embutida aqui:
+      // aviso o usuário que esse recurso depende do formato exato do arquivo.
+      restPreview.innerHTML = '<div class="err" style="color:var(--pending)">Para importar com segurança (mantendo parcelas/vencimentos), me envie este arquivo no chat — ' +
+        'eu confirmo o formato das colunas e gero a versão já com seus dados embutidos. ' +
+        'Assim evitamos perder pagamentos por diferença de formato.</div>';
+    });
+  }
+
+  document.getElementById("restore").addEventListener("click", openRestore);
+  document.getElementById("rest-close").addEventListener("click", closeRestore);
+  restOverlay.addEventListener("click", e => { if (e.target === restOverlay) closeRestore(); });
 
   // ---------- toast ----------
   const toastEl = document.getElementById("toast");
@@ -962,10 +1683,15 @@
 
   // ---------- reset ----------
   document.getElementById("reset").addEventListener("click", () => {
-    const count = Object.keys(payments).length;
+    let count = 0;
+    Object.keys(payments).forEach(k => { count += normEntry(payments[k]).pagos.length; });
     if (!count) { showToast("Nenhum pagamento manual para desfazer."); return; }
-    if (confirm("Isso vai apagar todos os " + count + " pagamentos registrados manualmente e voltar aos valores originais do CSV. Continuar?")) {
-      payments = {};
+    if (confirm("Isso vai apagar todos os " + count + " pagamentos registrados manualmente (mantendo dia e parcelas) e voltar os saldos aos valores originais do CSV. Continuar?")) {
+      Object.keys(payments).forEach(k => {
+        const e = normEntry(payments[k]);
+        e.pagos = [];
+        payments[k] = e;
+      });
       persist();
       render();
       showToast("Pagamentos manuais desfeitos.");
@@ -974,7 +1700,7 @@
 
   // ---------- exportar ----------
   document.getElementById("export").addEventListener("click", () => {
-    const header = ["#", "Cliente", "Status", "Falta pagar", "Já pago", "Total", "% pago", "Criado em", "Link"];
+    const header = ["#", "Cliente", "Status", "Falta pagar", "Já pago", "Total", "% pago", "Dia pagto", "Parcelas pagas", "Parcelas total", "Criado em", "Link"];
     const data = applyFilters();
     const lines = [header.join(";")];
     data.forEach((r, i) => {
@@ -986,6 +1712,9 @@
         fmtBRL.format(r.recebido),
         fmtBRL.format(r.total),
         r.pct + "%",
+        r.dia || "",
+        r.parcelasPagas,
+        r.parcelasTotal || "",
         r.data,
         r.link
       ].join(";"));
