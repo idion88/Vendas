@@ -111,6 +111,18 @@
     padding:.35rem .55rem;border-radius:8px;display:inline-flex;gap:.3rem;align-items:center;transition:.15s;white-space:nowrap}
   .open-link:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
   .row-actions{display:flex;gap:.4rem;align-items:center}
+  .btn-new{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--paid);background:var(--paid);
+    color:#fff;padding:.65rem 1.1rem;border-radius:11px;font-size:.88rem;font-weight:700;cursor:pointer;
+    transition:.15s;white-space:nowrap}
+  .btn-new:hover{filter:brightness(.95)}
+  .lucro-box{margin-top:1rem;border:1px solid var(--line);border-radius:13px;padding:.9rem 1rem;background:var(--surface-3)}
+  .lucro-row{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:600}
+  .lucro-row b{font-size:1.4rem;color:var(--paid);font-variant-numeric:tabular-nums}
+  .lucro-row b.neg{color:var(--debt)}
+  .lucro-sub{font-size:.76rem;color:var(--ink-soft);margin-top:.3rem}
+  .btn-danger{border:1px solid var(--debt);background:transparent;color:var(--debt);padding:.6rem 1rem;border-radius:10px;
+    font-size:.85rem;font-weight:600;cursor:pointer;margin-right:auto}
+  .btn-danger:hover{background:var(--debt);color:#fff}
   .det-btn{border:1px solid var(--line);background:var(--paper);color:var(--brand);padding:.4rem .7rem;
     border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap}
   .det-btn:hover{border-color:var(--brand);background:var(--chip)}
@@ -296,6 +308,7 @@
     .kpis{grid-template-columns:1fr 1fr;gap:.6rem;padding:1rem}
     .kpi{padding:.7rem .8rem} .kpi .value{font-size:1.05rem}
     .toolbar{padding:.8rem 1rem}
+    .btn-new{width:100%;justify-content:center;order:-1}
     .filters{width:100%}
     .filters .chip-btn{flex:1;text-align:center;padding:.5rem .4rem}
 
@@ -329,6 +342,21 @@
     .modal-lg{max-width:100%}
     .det-grid{grid-template-columns:1fr 1fr}
     .modal-stats{flex-direction:row}
+
+    /* ---- elementos de editar compra no celular ---- */
+    .rotina-opts{grid-template-columns:1fr 1fr}        /* 4 botões em 2x2 */
+    .rotina-opts button{padding:.65rem .3rem;font-size:.85rem}
+    .btn-gen{width:100%;padding:.75rem}
+    /* o grid do "gerar" empilha: dia em cima, botão embaixo */
+    .modal-body .det-grid[style*="auto"]{grid-template-columns:1fr!important}
+    /* itens de vencimento sem apertar */
+    .venc-item{flex-wrap:wrap;gap:.4rem .6rem}
+    .venc-item .vi-val{margin-left:0}
+    .venc-item .vi-date input{width:110px}
+    /* impede zoom automático do iOS ao focar inputs (precisa >=16px) */
+    .field input,.lock-card input,.search input,.venc-item .vi-date input{font-size:16px}
+    /* painéis vencido/hoje continuam tocáveis e legíveis */
+    .kpi.clickable .value{font-size:1.1rem}
   }
   @media (max-width:420px){
     .kpis{grid-template-columns:1fr}
@@ -336,9 +364,14 @@
     .parc-summary{flex-direction:row}
     .parc-box{min-width:0;padding:.5rem .3rem}
     .parc-box .pn{font-size:1.1rem}
+    .rotina-opts button{font-size:.8rem;padding:.6rem .2rem}
   }
 
-  @media (max-width:640px){.modal-stats{}}
+  @media (max-width:640px){
+    footer{flex-direction:column;align-items:stretch;gap:.7rem}
+    footer .right{justify-content:space-between}
+    footer .right .btn-ghost,footer .right .btn-export{flex:1;justify-content:center;text-align:center}
+  }
 </style>
 </head>
 <body>
@@ -376,6 +409,10 @@
       <input id="search" type="text" placeholder="Digite o nome do cliente…" autocomplete="off">
       <button class="clear" id="clear" title="Limpar">×</button>
     </div>
+    <button class="btn-new" id="new-sale">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Nova venda
+    </button>
     <div class="filters" id="filters">
       <button class="chip-btn active" data-filter="all">Todos</button>
       <button class="chip-btn" data-filter="open">Em aberto</button>
@@ -504,6 +541,7 @@
       <div class="hist-list" id="d-hist"></div>
     </div>
     <div class="modal-foot">
+      <button class="btn-danger" id="d-delete" style="display:none">Excluir venda</button>
       <button class="btn-cancel" id="d-close">Fechar</button>
       <button class="btn-confirm" id="d-save">Salvar alterações</button>
     </div>
@@ -538,6 +576,68 @@
     </div>
     <div class="modal-foot">
       <button class="btn-cancel" id="rest-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal NOVA VENDA -->
+<div class="overlay" id="nv-overlay">
+  <div class="modal modal-lg" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>Registrar nova venda</h3>
+      <div class="client">Preencha os dados da venda fiada</div>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="nv-nome">Nome do cliente / descrição</label>
+        <input id="nv-nome" type="text" placeholder="Ex: Maria TV 50&quot;" style="padding-left:.9rem;font-size:1rem">
+      </div>
+
+      <div class="det-grid" style="margin-top:1rem">
+        <div class="field">
+          <label for="nv-custo">Valor de custo</label>
+          <div class="input-money"><span>R$</span><input id="nv-custo" type="text" inputmode="decimal" placeholder="0,00"></div>
+        </div>
+        <div class="field">
+          <label for="nv-venda">Valor de venda (total)</label>
+          <div class="input-money"><span>R$</span><input id="nv-venda" type="text" inputmode="decimal" placeholder="0,00"></div>
+        </div>
+      </div>
+
+      <div class="lucro-box" id="nv-lucro-box">
+        <div class="lucro-row">
+          <span>Lucro desta venda</span>
+          <b id="nv-lucro">R$ 0,00</b>
+        </div>
+        <div class="lucro-sub" id="nv-margem"></div>
+      </div>
+
+      <div class="sec-title" style="margin-top:1rem">📅 Parcelas e vencimentos</div>
+      <div class="det-grid">
+        <div class="field">
+          <label for="nv-primeira">Data do 1º pagamento</label>
+          <input id="nv-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+        </div>
+        <div class="field">
+          <label for="nv-parcelas">Nº de parcelas</label>
+          <input id="nv-parcelas" type="text" inputmode="numeric" placeholder="ex: 10" maxlength="3" style="padding-left:.9rem;text-align:center;font-size:1rem">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:.4rem">
+        <label>Rotina de pagamento</label>
+        <div class="rotina-opts" id="nv-rotina">
+          <button type="button" data-rot="semanal">Semanal</button>
+          <button type="button" data-rot="quinzenal">Quinzenal</button>
+          <button type="button" data-rot="mensal">Mensal</button>
+          <button type="button" data-rot="manual">Manual</button>
+        </div>
+      </div>
+      <div class="parc-hint" id="nv-hint">As datas das parcelas serão geradas a partir da 1ª data + rotina ao salvar.</div>
+      <div class="err" id="nv-err"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="nv-cancel">Cancelar</button>
+      <button class="btn-confirm" id="nv-save">Registrar venda</button>
     </div>
   </div>
 </div>
@@ -872,28 +972,47 @@
   }
 
   // ---------- persistência (nuvem + local) ----------
-  // payments = { key: valorTotalPagoExtra }
+  // payload sincronizado = { pagamentos: {key:{...}}, vendas: [ {id,nome,custo,venda,data,...} ] }
+  // (retrocompatível: se vier o formato antigo {key:{...}} direto, é tratado como pagamentos)
+  let payments = {};      // { key: entry }
+  let novasVendas = [];   // vendas criadas dentro do app
+
+  function unwrap(payload) {
+    if (!payload || typeof payload !== "object") return { pagamentos: {}, vendas: [] };
+    // formato novo
+    if (payload.pagamentos || payload.vendas) {
+      return {
+        pagamentos: (payload.pagamentos && typeof payload.pagamentos === "object") ? payload.pagamentos : {},
+        vendas: Array.isArray(payload.vendas) ? payload.vendas : []
+      };
+    }
+    // formato antigo: o objeto inteiro era o "payments"
+    return { pagamentos: payload, vendas: [] };
+  }
+  function wrap() { return { pagamentos: payments, vendas: novasVendas }; }
+
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
+      const u = unwrap(raw ? JSON.parse(raw) : null);
+      payments = u.pagamentos; novasVendas = u.vendas;
+    } catch (e) { payments = {}; novasVendas = []; }
   }
-  function saveLocal(p) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+  function saveLocal() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(wrap())); }
     catch (e) { /* indisponível: só memória */ }
   }
-  let payments = loadLocal();
+  loadLocal();
 
   // grava na nuvem (e sempre no local como backup)
   async function persist() {
-    saveLocal(payments);
+    saveLocal();
     if (!cloudEnabled()) return;
     setSync("syncing");
     try {
       const { error } = await supa
         .from(CLOUD_CONFIG.TABLE)
-        .upsert({ id: CLOUD_CONFIG.ROW_ID, payload: payments }, { onConflict: "id" });
+        .upsert({ id: CLOUD_CONFIG.ROW_ID, payload: wrap() }, { onConflict: "id" });
       if (error) throw error;
       setSync("on");
     } catch (e) {
@@ -903,7 +1022,7 @@
     }
   }
 
-  // lê da nuvem; se vazia, semeia com o que houver local (ou {} = base dos 275 originais)
+  // lê da nuvem; se vazia, semeia com o que houver local
   async function pullFromCloud() {
     if (!cloudEnabled()) return;
     setSync("syncing");
@@ -915,12 +1034,12 @@
         .maybeSingle();
       if (error) throw error;
       if (data && data.payload && typeof data.payload === "object") {
-        payments = data.payload;
-        saveLocal(payments);
+        const u = unwrap(data.payload);
+        payments = u.pagamentos; novasVendas = u.vendas;
+        saveLocal();
       } else {
-        // primeira vez: cria a linha com o que temos localmente
         await supa.from(CLOUD_CONFIG.TABLE)
-          .upsert({ id: CLOUD_CONFIG.ROW_ID, payload: payments }, { onConflict: "id" });
+          .upsert({ id: CLOUD_CONFIG.ROW_ID, payload: wrap() }, { onConflict: "id" });
       }
       setSync("on");
     } catch (e) {
@@ -963,7 +1082,7 @@
   themeBtn.addEventListener("click", toggleTheme);
   applyTheme(loadTheme()); // aplica preferência salva já no carregamento
 
-  const base = RAW.map((r, i) => {
+  const baseRAW = RAW.map((r, i) => {
     const saldoOrig = Math.abs(parseMoney(r[3]));
     const recebidoOrig = parseMoney(r[4]);
     const total = parseMoney(r[5]);
@@ -973,9 +1092,37 @@
       saldoOrig, recebidoOrig, total,
       data: r[7] || "",
       dataSort: parseDate(r[7]),
-      link: r[8] || ""
+      link: r[8] || "",
+      custo: 0,            // fichas antigas não têm custo registrado
+      venda: total,        // venda = total a receber
+      novaVenda: false
     };
   });
+
+  // converte uma venda criada no app em ficha (mesma forma de baseRAW)
+  function vendaToFicha(v) {
+    const venda = Number(v.venda) || 0;
+    return {
+      key: v.id,
+      nome: v.nome || "—",
+      saldoOrig: venda,        // começa devendo o valor de venda inteiro
+      recebidoOrig: 0,         // nada recebido ainda (pagamentos entram via payments)
+      total: venda,
+      data: v.data || "",
+      dataSort: parseDate(v.data || ""),
+      link: "",
+      custo: Number(v.custo) || 0,
+      venda: venda,
+      novaVenda: true
+    };
+  }
+
+  // base = fichas originais + vendas novas (recriada quando há mudança)
+  let base = baseRAW.slice();
+  function rebuildBase() {
+    base = baseRAW.concat(novasVendas.map(vendaToFicha));
+  }
+  rebuildBase();
 
   // ---------- estrutura de dados por ficha ----------
   // payments[key] = {
@@ -1085,13 +1232,17 @@
       }
     }
 
+    // ----- lucro: venda - custo -----
+    const lucro = (Number(b.venda) || b.total) - (Number(b.custo) || 0);
+
     return {
       ...b, recebido, saldo, pct, status,
       edited: extra > 0.005,
       dia: e.dia, parcelasTotal, parcelasPagas, parcelasFaltam,
       pagos: e.pagos,
       primeira: e.primeira, rotina: e.rotina, vencimentos: venc,
-      valorParcela, vencidoValor, venceHojeValor, proxData, proxValor
+      valorParcela, vencidoValor, venceHojeValor, proxData, proxValor,
+      lucro
     };
   }
   function rows() { return base.map(compute); }
@@ -1327,6 +1478,8 @@
     if (detOverlay.classList.contains("show")) closeDetails();
     const ro = document.getElementById("rest-overlay");
     if (ro && ro.classList.contains("show")) ro.classList.remove("show");
+    const no = document.getElementById("nv-overlay");
+    if (no && no.classList.contains("show")) no.classList.remove("show");
   });
 
   tbody.addEventListener("click", e => {
@@ -1437,12 +1590,31 @@
     detVenc = (e.vencimentos || []).slice();
     dParcHint.textContent = "";
     dParcHint.classList.remove("warn");
+    // botão excluir só aparece em vendas criadas no app
+    const delBtn = document.getElementById("d-delete");
+    delBtn.style.display = b.novaVenda ? "inline-block" : "none";
     renderParcSummary(r);
     renderVencList(r);
     renderHist(r);
     detOverlay.classList.add("show");
   }
   function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
+
+  // excluir venda criada no app
+  document.getElementById("d-delete").addEventListener("click", () => {
+    if (!detKey) return;
+    const b = base.find(x => x.key === detKey);
+    if (!b || !b.novaVenda) return;
+    if (confirm('Excluir a venda "' + b.nome + '"? Isso remove a ficha e todos os pagamentos dela. Não pode ser desfeito.')) {
+      novasVendas = novasVendas.filter(v => v.id !== detKey);
+      delete payments[detKey];
+      rebuildBase();
+      persist();
+      closeDetails();
+      render();
+      showToast("Venda excluída.");
+    }
+  });
 
   // escolher rotina
   dRotina.addEventListener("click", e => {
@@ -1568,17 +1740,31 @@
   document.getElementById("rest-opt-original").addEventListener("click", () => {
     let pgs = 0;
     Object.keys(payments).forEach(k => { pgs += normEntry(payments[k]).pagos.length; });
-    const msg = "Tem certeza? Isso vai apagar TUDO que você registrou no app:\n\n" +
+    const temVendas = novasVendas.length;
+    const msg = "Tem certeza? Isso vai apagar os pagamentos, dias e parcelas que você registrou:\n\n" +
       "• " + pgs + " pagamento(s) do histórico\n" +
       "• todos os dias de pagamento e parcelas cadastrados\n\n" +
-      "Os 275 registros voltam exatamente como estavam no CSV original. Esta ação não pode ser desfeita.";
-    if (confirm(msg)) {
-      payments = {};
-      persist();
-      render();
-      closeRestore();
-      showToast("Base restaurada aos valores originais do CSV.");
+      "Os 275 registros originais voltam ao estado do CSV. Esta ação não pode ser desfeita.";
+    if (!confirm(msg)) return;
+    let manterVendas = false;
+    if (temVendas) {
+      manterVendas = confirm("Você tem " + temVendas + " venda(s) cadastrada(s) no app.\n\n" +
+        "Clique em OK para MANTER essas vendas (recomendado).\n" +
+        "Clique em Cancelar para APAGAR também as vendas novas.");
     }
+    if (manterVendas) {
+      // zera só os pagamentos das fichas originais; preserva vendas novas e suas parcelas
+      const ids = new Set(novasVendas.map(v => v.id));
+      Object.keys(payments).forEach(k => { if (!ids.has(k)) delete payments[k]; });
+    } else {
+      payments = {};
+      novasVendas = [];
+    }
+    rebuildBase();
+    persist();
+    render();
+    closeRestore();
+    showToast("Base restaurada.");
   });
 
   // opção 2: carregar arquivo
@@ -1670,6 +1856,111 @@
   document.getElementById("restore").addEventListener("click", openRestore);
   document.getElementById("rest-close").addEventListener("click", closeRestore);
   restOverlay.addEventListener("click", e => { if (e.target === restOverlay) closeRestore(); });
+
+  // ---------- modal NOVA VENDA ----------
+  const nvOverlay = document.getElementById("nv-overlay");
+  const nvNome = document.getElementById("nv-nome");
+  const nvCusto = document.getElementById("nv-custo");
+  const nvVenda = document.getElementById("nv-venda");
+  const nvLucro = document.getElementById("nv-lucro");
+  const nvMargem = document.getElementById("nv-margem");
+  const nvPrimeira = document.getElementById("nv-primeira");
+  const nvParcelas = document.getElementById("nv-parcelas");
+  const nvRotina = document.getElementById("nv-rotina");
+  const nvHint = document.getElementById("nv-hint");
+  const nvErr = document.getElementById("nv-err");
+  let nvRot = "mensal";
+
+  function setNvRotina(rot) {
+    nvRot = rot;
+    nvRotina.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.rot === rot));
+  }
+
+  function atualizaLucro() {
+    const custo = parseInput(nvCusto.value) || 0;
+    const venda = parseInput(nvVenda.value) || 0;
+    const lucro = venda - custo;
+    nvLucro.textContent = fmtBRL.format(lucro);
+    nvLucro.classList.toggle("neg", lucro < 0);
+    if (venda > 0) {
+      const margem = Math.round((lucro / venda) * 100);
+      nvMargem.textContent = "Margem de " + margem + "% sobre a venda" + (custo === 0 ? " (custo não informado)" : "");
+    } else {
+      nvMargem.textContent = "";
+    }
+  }
+  nvCusto.addEventListener("input", atualizaLucro);
+  nvVenda.addEventListener("input", atualizaLucro);
+
+  function openNewSale() {
+    nvNome.value = "";
+    nvCusto.value = "";
+    nvVenda.value = "";
+    nvPrimeira.value = hojeBR();
+    nvParcelas.value = "";
+    setNvRotina("mensal");
+    nvErr.textContent = "";
+    nvHint.textContent = "As datas das parcelas serão geradas a partir da 1ª data + rotina ao salvar.";
+    atualizaLucro();
+    nvOverlay.classList.add("show");
+    setTimeout(() => nvNome.focus(), 50);
+  }
+  function closeNewSale() { nvOverlay.classList.remove("show"); }
+
+  nvRotina.addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (btn) setNvRotina(btn.dataset.rot);
+  });
+
+  function gerarIdVenda() {
+    return "venda-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+  }
+
+  function salvarNovaVenda() {
+    const nome = (nvNome.value || "").trim();
+    const custo = parseInput(nvCusto.value) || 0;
+    const venda = parseInput(nvVenda.value) || 0;
+    const parcelas = parseInt((nvParcelas.value || "").replace(/\D/g, "")) || 0;
+    const primeira = (nvPrimeira.value || "").trim();
+
+    if (!nome) { nvErr.textContent = "Informe o nome do cliente ou descrição."; return; }
+    if (venda <= 0) { nvErr.textContent = "Informe o valor de venda."; return; }
+    if (parcelas > 0 && !parseDateBR(primeira)) {
+      nvErr.textContent = "Para gerar parcelas, informe a data do 1º pagamento (dd/mm/aaaa)."; return;
+    }
+
+    const id = gerarIdVenda();
+    // registra a venda (dados do produto/custo/venda)
+    novasVendas.push({
+      id, nome,
+      custo, venda,
+      data: primeira && parseDateBR(primeira) ? primeira : hojeBR(),
+      criadoEm: hojeBR()
+    });
+    // configura as parcelas dessa venda no payments
+    const e = entryFor(id);
+    e.parcelas = parcelas;
+    e.primeira = parseDateBR(primeira) ? primeira : "";
+    e.rotina = nvRot;
+    const fp = parseDateBR(primeira);
+    e.dia = fp ? String(fp.getDate()) : "";
+    e.vencimentos = parcelas > 0 && fp ? generateDueDates(primeira, nvRot, parcelas) : [];
+
+    rebuildBase();
+    persist();
+    closeNewSale();
+    // mostra a venda recém-criada no topo
+    searchEl.value = nome;
+    state.q = nome;
+    clearBtn.classList.add("show");
+    render();
+    showToast("Venda registrada — lucro de " + fmtBRL.format(venda - custo) + ".");
+  }
+
+  document.getElementById("new-sale").addEventListener("click", openNewSale);
+  document.getElementById("nv-save").addEventListener("click", salvarNovaVenda);
+  document.getElementById("nv-cancel").addEventListener("click", closeNewSale);
+  nvOverlay.addEventListener("click", e => { if (e.target === nvOverlay) closeNewSale(); });
 
   // ---------- toast ----------
   const toastEl = document.getElementById("toast");
