@@ -10,6 +10,7 @@
     --ink:#16202b; --ink-soft:#51687e; --line:#e3eaf1; --line-soft:#eef3f8;
     --paper:#fff; --bg:#eef2f7; --brand:#155e9c; --brand-dk:#0c3f6e;
     --debt:#c2334a; --paid:#1f8a4c; --pending:#c98510;
+    --gold:#b8860b;
     --chip:#e9f0f8; --shadow:0 1px 2px rgba(16,40,70,.04),0 12px 32px -16px rgba(16,40,70,.28);
     /* superfícies derivadas (usadas onde antes havia cor fixa) */
     --surface-2:#f4f7fb;   /* cabeçalho de tabela, fundos suaves */
@@ -24,6 +25,7 @@
     --ink:#e7eef6; --ink-soft:#93a7bd; --line:#26323f; --line-soft:#1d2731;
     --paper:#141d27; --bg:#0c131b; --brand:#3b9be0; --brand-dk:#7cc1f0;
     --debt:#f0697d; --paid:#4cc47e; --pending:#e0a44a;
+    --gold:#e8b948;
     --chip:#1c2a38; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px -16px rgba(0,0,0,.6);
     --surface-2:#1a242f; --surface-3:#121a23; --row-hover:#1a242f;
     --kpi-grad-a:#161f29; --kpi-grad-b:#141d27;
@@ -52,13 +54,13 @@
     font-weight:600;display:flex;align-items:center;gap:.4rem}
   .kpi .value{font-size:1.35rem;font-weight:700;margin-top:.45rem;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .kpi .sub{font-size:.73rem;color:var(--ink-soft);margin-top:.15rem}
-  .kpi.debt .value{color:var(--debt)} .kpi.paid .value{color:var(--paid)} .kpi.brand .value{color:var(--brand-dk)}
+  .kpi.debt .value{color:var(--brand)} .kpi.paid .value{color:var(--paid)} .kpi.brand .value{color:var(--gold)}
   .kpi.danger .value{color:var(--debt)} .kpi.warn .value{color:var(--pending)}
   .kpi.danger{border-color:#f3c3cb} .kpi.warn{border-color:#f0dcb0}
   .kpi.clickable{cursor:pointer;transition:.15s}
   .kpi.clickable:hover{box-shadow:0 6px 18px -8px rgba(16,40,70,.3);transform:translateY(-1px)}
   .kpi .dot{width:8px;height:8px;border-radius:50%}
-  .dot.debt{background:var(--debt)} .dot.paid{background:var(--paid)} .dot.total{background:var(--brand)} .dot.count{background:var(--ink-soft)}
+  .dot.debt{background:var(--brand)} .dot.paid{background:var(--paid)} .dot.total{background:var(--gold)} .dot.count{background:var(--ink-soft)}
   .dot.danger{background:var(--debt)} .dot.warn{background:var(--pending)}
   html[data-theme="dark"] .kpi.danger{border-color:#5a2730} html[data-theme="dark"] .kpi.warn{border-color:#544827}
 
@@ -89,7 +91,7 @@
   .num{width:44px;color:var(--ink-soft);font-size:.76rem;font-variant-numeric:tabular-nums}
   .name{font-weight:600;min-width:170px}
   .money{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;text-align:right}
-  .money.debt{color:var(--debt)} .money.paid{color:var(--paid)} .money.muted{color:var(--ink-soft);font-weight:500}
+  .money.debt{color:var(--brand)} .money.atrasado{color:var(--debt)} .money.paid{color:var(--paid)} .money.muted{color:var(--ink-soft);font-weight:500}
   .date{color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
   .bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden;min-width:80px;margin-top:4px}
   .bar>span{display:block;height:100%;background:var(--paid);border-radius:999px;transition:width .3s}
@@ -97,7 +99,7 @@
 
   .status{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .6rem;border-radius:999px;
     font-size:.72rem;font-weight:600;white-space:nowrap}
-  .status.open{background:#fdeef0;color:var(--debt)}
+  .status.open{background:#e8f0fa;color:var(--brand)}
   .status.partial{background:#fdf4e6;color:var(--pending)}
   .status.settled{background:#e8f6ee;color:var(--paid)}
   .status .sdot{width:6px;height:6px;border-radius:50%;background:currentColor}
@@ -233,7 +235,7 @@
   .mstat{flex:1;border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem}
   .mstat .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600}
   .mstat .v{font-size:1.05rem;font-weight:700;margin-top:.25rem;font-variant-numeric:tabular-nums}
-  .mstat.debt .v{color:var(--debt)} .mstat.paid .v{color:var(--paid)}
+  .mstat.debt .v{color:var(--brand)} .mstat.paid .v{color:var(--paid)}
   .field label{display:block;font-size:.8rem;font-weight:600;margin-bottom:.4rem;color:var(--ink)}
   .field .input-money{position:relative}
   .field .input-money span{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--ink-soft);font-weight:600}
@@ -298,7 +300,7 @@
   .header-tools{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 
   /* ajustes de contraste no tema escuro para badges */
-  html[data-theme="dark"] .status.open{background:#3a1f25;color:var(--debt)}
+  html[data-theme="dark"] .status.open{background:#16293d;color:var(--brand)}
   html[data-theme="dark"] .status.partial{background:#3a2e1a;color:var(--pending)}
   html[data-theme="dark"] .status.settled{background:#1c3528;color:var(--paid)}
   html[data-theme="dark"] .sync.on{background:#1c3528;border-color:#27543c}
@@ -1333,7 +1335,7 @@
             ((diaInfo || parcChip || vencInfo) ? '<div class="meta-chips">' + vencInfo + diaInfo + parcChip + '</div>' : '') +
           '</td>' +
           '<td data-label="Status"><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
-          '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
+          '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? (r.vencidoValor > 0.005 ? "atrasado" : "debt") : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
           '<td data-label="Já pago" class="money paid">' + fmtBRL.format(r.recebido) + '</td>' +
           '<td data-label="Total" class="money muted">' + fmtBRL.format(r.total) + '</td>' +
           '<td data-label="Progresso"><div class="bar"><span style="width:' + r.pct + '%"></span></div><span class="pct">' + r.pct + '% pago</span></td>' +
@@ -1799,8 +1801,10 @@
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restante = r.recebido;
     const linhas = [];
+    const hojeImg = hojeMeiaNoite();
     for (let i = 0; i < total; i++) {
       const ds = (r.vencimentos && r.vencimentos[i]) || "";
+      const dtP = parseDateBR(ds);
       const pago = Math.min(valorParcela, Math.max(0, restante));
       restante -= pago;
       const falta = Math.max(0, valorParcela - pago);
@@ -1808,7 +1812,9 @@
       if (falta <= 0.005) st = "paga";
       else if (pago > 0.005) st = "parcial";
       else st = "aberta";
-      linhas.push({ n: i + 1, data: ds, valor: valorParcela, falta, status: st });
+      // vencida = ainda falta algo e a data já passou
+      const vencida = falta > 0.005 && dtP && dtP < hojeImg;
+      linhas.push({ n: i + 1, data: ds, valor: valorParcela, falta, status: st, vencida });
     }
 
     // dimensões
@@ -1828,7 +1834,8 @@
 
     // cores
     const C = { brand: "#0c3f6e", brand2: "#155e9c", ink: "#16202b", soft: "#6b7f93",
-                paid: "#1f8a4c", debt: "#c2334a", pend: "#c98510", line: "#e3eaf1", bg: "#ffffff", chipbg: "#f2f7fe" };
+                paid: "#1f8a4c", debt: "#c2334a", pend: "#c98510", blue: "#155e9c", gold: "#b8860b",
+                line: "#e3eaf1", bg: "#ffffff", chipbg: "#f2f7fe" };
 
     // fundo
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
@@ -1875,8 +1882,9 @@
     // linhas de parcelas
     linhas.forEach(p => {
       const tag = p.status === "paga" ? { t: "PAGA", c: C.paid }
+                : p.vencida ? { t: "VENCIDA", c: C.debt }
                 : p.status === "parcial" ? { t: "PARCIAL", c: C.pend }
-                : { t: "A PAGAR", c: C.debt };
+                : { t: "A PAGAR", c: C.blue };
       // fundo alternado
       ctx.fillStyle = "#f8fafd"; roundRect(ctx, padding, y, W - padding * 2, rowH - 14, 10); ctx.fill();
       // número
