@@ -147,6 +147,9 @@
   .hist-head{display:flex;align-items:center;justify-content:space-between;font-size:.82rem;font-weight:700;
     margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--line)}
   .hist-count{background:var(--chip);color:var(--brand-dk);font-size:.72rem;padding:.1rem .55rem;border-radius:999px}
+  .btn-share{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--paid);background:transparent;
+    color:var(--paid);padding:.3rem .65rem;border-radius:8px;font-size:.74rem;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-share:hover{background:var(--paid);color:#fff}
   .hist-list{display:flex;flex-direction:column;gap:.5rem;max-height:240px;overflow-y:auto}
   .hist-item{display:flex;align-items:flex-start;gap:.7rem;border:1px solid var(--line);border-radius:11px;padding:.6rem .75rem;background:var(--surface-3)}
   .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -367,6 +370,8 @@
     .parc-box{min-width:0;padding:.5rem .3rem}
     .parc-box .pn{font-size:1.1rem}
     .rotina-opts button{font-size:.8rem;padding:.6rem .2rem}
+    .hist-head{flex-wrap:wrap;gap:.4rem}
+    .btn-share{padding:.4rem .7rem;font-size:.78rem}
   }
 
   @media (max-width:640px){
@@ -538,7 +543,13 @@
 
       <div class="hist-head">
         <span>Histórico de pagamentos</span>
-        <span id="d-hist-count" class="hist-count">0</span>
+        <span style="display:flex;align-items:center;gap:.5rem">
+          <button class="btn-share" id="d-share" title="Gerar imagem para compartilhar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+            Compartilhar
+          </button>
+          <span id="d-hist-count" class="hist-count">0</span>
+        </span>
       </div>
       <div class="hist-list" id="d-hist"></div>
     </div>
@@ -1768,6 +1779,192 @@
   document.getElementById("d-save").addEventListener("click", saveDetails);
   document.getElementById("d-close").addEventListener("click", closeDetails);
   detOverlay.addEventListener("click", e => { if (e.target === detOverlay) closeDetails(); });
+
+  // ---------- COMPARTILHAR como imagem JPG ----------
+  function wrapText(ctx, text, maxWidth) {
+    const words = String(text).split(" ");
+    const lines = []; let line = "";
+    for (const w of words) {
+      const test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function gerarImagemFicha(r) {
+    // monta a lista de parcelas com a mesma distribuição do compute
+    const total = r.parcelasTotal || 0;
+    const valorParcela = total > 0 ? (r.total / total) : 0;
+    let restante = r.recebido;
+    const linhas = [];
+    for (let i = 0; i < total; i++) {
+      const ds = (r.vencimentos && r.vencimentos[i]) || "";
+      const pago = Math.min(valorParcela, Math.max(0, restante));
+      restante -= pago;
+      const falta = Math.max(0, valorParcela - pago);
+      let st;
+      if (falta <= 0.005) st = "paga";
+      else if (pago > 0.005) st = "parcial";
+      else st = "aberta";
+      linhas.push({ n: i + 1, data: ds, valor: valorParcela, falta, status: st });
+    }
+
+    // dimensões
+    const W = 1080;
+    const scale = 2; // nitidez
+    const padding = 60;
+    const headerH = 250;
+    const rowH = 70;
+    const footerH = 140;
+    const listH = (linhas.length || 1) * rowH + 80;
+    const H = headerH + listH + footerH;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W * scale; canvas.height = H * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    // cores
+    const C = { brand: "#0c3f6e", brand2: "#155e9c", ink: "#16202b", soft: "#6b7f93",
+                paid: "#1f8a4c", debt: "#c2334a", pend: "#c98510", line: "#e3eaf1", bg: "#ffffff", chipbg: "#f2f7fe" };
+
+    // fundo
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+
+    // header
+    const grad = ctx.createLinearGradient(0, 0, W, headerH);
+    grad.addColorStop(0, C.brand); grad.addColorStop(1, C.brand2);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, headerH);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 30px Arial, sans-serif";
+    ctx.fillText("Crediado · Extrato do cliente", padding, 70);
+    ctx.font = "700 46px Arial, sans-serif";
+    const nomeLinhas = wrapText(ctx, r.nome, W - padding * 2);
+    ctx.fillText(nomeLinhas[0], padding, 130);
+
+    // mini cards: pago / falta / total
+    const cardY = 160, cardW = (W - padding * 2 - 40) / 3, cardH = 64;
+    const cards = [
+      { l: "JÁ PAGO", v: fmtBRL.format(r.recebido), c: "#bdf0d0" },
+      { l: "FALTA", v: fmtBRL.format(r.saldo), c: "#ffd2d8" },
+      { l: "TOTAL", v: fmtBRL.format(r.total), c: "#ffffff" }
+    ];
+    cards.forEach((cd, i) => {
+      const x = padding + i * (cardW + 20);
+      ctx.fillStyle = "rgba(255,255,255,.14)";
+      roundRect(ctx, x, cardY, cardW, cardH, 12); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.75)"; ctx.font = "700 18px Arial";
+      ctx.fillText(cd.l, x + 16, cardY + 26);
+      ctx.fillStyle = cd.c; ctx.font = "700 26px Arial";
+      ctx.fillText(cd.v, x + 16, cardY + 52);
+    });
+
+    // título da lista
+    let y = headerH + 50;
+    ctx.fillStyle = C.ink; ctx.font = "700 30px Arial";
+    ctx.fillText("Parcelas", padding, y);
+    ctx.fillStyle = C.soft; ctx.font = "600 22px Arial";
+    const resumoParc = r.parcelasPagas + " de " + total + " pagas";
+    ctx.textAlign = "right"; ctx.fillText(total > 0 ? resumoParc : "sem parcelas definidas", W - padding, y);
+    ctx.textAlign = "left";
+    y += 30;
+
+    // linhas de parcelas
+    linhas.forEach(p => {
+      const tag = p.status === "paga" ? { t: "PAGA", c: C.paid }
+                : p.status === "parcial" ? { t: "PARCIAL", c: C.pend }
+                : { t: "A PAGAR", c: C.debt };
+      // fundo alternado
+      ctx.fillStyle = "#f8fafd"; roundRect(ctx, padding, y, W - padding * 2, rowH - 14, 10); ctx.fill();
+      // número
+      ctx.fillStyle = C.chipbg; roundRect(ctx, padding + 14, y + 12, 34, 34, 8); ctx.fill();
+      ctx.fillStyle = C.brand; ctx.font = "700 20px Arial"; ctx.textAlign = "center";
+      ctx.fillText(String(p.n), padding + 14 + 17, y + 35); ctx.textAlign = "left";
+      // data
+      ctx.fillStyle = C.ink; ctx.font = "600 24px Arial";
+      ctx.fillText(p.data || "sem data", padding + 70, y + 35);
+      // valor / falta
+      ctx.textAlign = "right";
+      if (p.status === "parcial") {
+        ctx.fillStyle = C.soft; ctx.font = "600 20px Arial";
+        ctx.fillText("falta " + fmtBRL.format(p.falta), W - padding - 130, y + 35);
+      } else {
+        ctx.fillStyle = C.ink; ctx.font = "600 22px Arial";
+        ctx.fillText(fmtBRL.format(p.valor), W - padding - 130, y + 35);
+      }
+      // etiqueta status
+      ctx.font = "700 17px Arial";
+      const tw = ctx.measureText(tag.t).width + 24;
+      ctx.fillStyle = tag.c; roundRect(ctx, W - padding - tw, y + 10, tw, 30, 15); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+      ctx.fillText(tag.t, W - padding - tw / 2, y + 30); ctx.textAlign = "left";
+      y += rowH;
+    });
+
+    if (!linhas.length) {
+      ctx.fillStyle = C.soft; ctx.font = "500 24px Arial"; ctx.textAlign = "center";
+      ctx.fillText("Nenhuma parcela cadastrada para esta ficha.", W / 2, y + 40);
+      ctx.textAlign = "left";
+    }
+
+    // rodapé
+    const fy = H - footerH + 40;
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, fy - 20); ctx.lineTo(W - padding, fy - 20); ctx.stroke();
+    ctx.fillStyle = C.soft; ctx.font = "500 22px Arial";
+    const hoje = new Date();
+    const hojeStr = String(hoje.getDate()).padStart(2, "0") + "/" + String(hoje.getMonth() + 1).padStart(2, "0") + "/" + hoje.getFullYear();
+    ctx.fillText("Extrato gerado em " + hojeStr, padding, fy + 10);
+    if (r.proxData) {
+      ctx.fillStyle = C.brand; ctx.font = "700 22px Arial"; ctx.textAlign = "right";
+      ctx.fillText("Próx. vencimento: " + r.proxData, W - padding, fy + 10);
+      ctx.textAlign = "left";
+    }
+
+    return canvas;
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  async function compartilharFicha() {
+    if (!detKey) return;
+    const b = base.find(x => x.key === detKey);
+    if (!b) return;
+    const r = compute(b);
+    const canvas = gerarImagemFicha(r);
+    const nomeArq = "crediado_" + (r.nome || "cliente").replace(/[^\w]+/g, "_").toLowerCase().slice(0, 30) + ".jpg";
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) { showToast("Não consegui gerar a imagem."); return; }
+      const file = new File([blob], nomeArq, { type: "image/jpeg" });
+      // tenta compartilhamento nativo (celular)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
+          return;
+        } catch (e) { /* usuário cancelou ou falhou: cai pro download */ }
+      }
+      // fallback: baixa o arquivo
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = nomeArq; a.click();
+      URL.revokeObjectURL(url);
+      showToast("Imagem salva — pronta para compartilhar.");
+    }, "image/jpeg", 0.92);
+  }
+
+  document.getElementById("d-share").addEventListener("click", compartilharFicha);
 
   // ---------- modal RESTAURAR / IMPORTAR CSV ----------
   const restOverlay = document.getElementById("rest-overlay");
