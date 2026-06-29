@@ -184,7 +184,9 @@
   .vi-tag.paga{background:#e8f6ee;color:var(--paid)}
   .vi-tag.venc{background:#fdeef0;color:var(--debt)}
   .vi-tag.hoje{background:#fdf4e6;color:var(--pending)}
-  html[data-theme="dark"] .vi-tag.paga{background:#1c3528} html[data-theme="dark"] .vi-tag.venc{background:#3a1f25} html[data-theme="dark"] .vi-tag.hoje{background:#3a2e1a}
+  .vi-tag.parcial{background:#eaf2fb;color:var(--brand-dk)}
+  .venc-item .vi-val s{color:var(--ink-soft);opacity:.6;margin-right:.3rem;font-weight:500}
+  html[data-theme="dark"] .vi-tag.paga{background:#1c3528} html[data-theme="dark"] .vi-tag.venc{background:#3a1f25} html[data-theme="dark"] .vi-tag.hoje{background:#3a2e1a} html[data-theme="dark"] .vi-tag.parcial{background:#1c2a3a}
 
   /* ---- opções de restaurar ---- */
   .rest-opt{display:flex;gap:.9rem;align-items:flex-start;border:1px solid var(--line);border-radius:13px;
@@ -1207,30 +1209,47 @@
     if (saldo <= 0.005) status = "settled";
     else if (recebido > 0.005) status = "partial";
     else status = "open";
-    const parcelasPagas = e.pagos.length;             // cada pagamento = 1 parcela
     const parcelasTotal = e.parcelas || 0;
-    const parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
 
-    // ----- análise de vencimentos -----
-    // valor sugerido por parcela = saldo devedor original / parcelas
-    const valorParcela = parcelasTotal > 0 ? (b.saldoOrig / parcelasTotal) : 0;
+    // ----- análise de parcelas e vencimentos (Opção 1) -----
+    // Cada parcela vale o VALOR CHEIO da dívida ÷ parcelas.
+    // O total já pago abate as parcelas na ordem: quita as primeiras inteiras
+    // e deixa a próxima parcial se sobrar um pedaço.
+    const valorParcela = parcelasTotal > 0 ? (b.total / parcelasTotal) : 0;
     const venc = e.vencimentos || [];
     const hoje = hojeMeiaNoite();
+
+    const parcInfo = [];   // detalhe de cada parcela
+    let restantePago = recebido;   // total já recebido (orig + pagamentos), distribuído
+    let parcelasQuitadas = 0;
     let vencidoValor = 0, venceHojeValor = 0, proxData = "", proxValor = 0;
-    let primeiraEmAberto = -1;
-    if (status !== "settled" && parcelasTotal > 0) {
+
+    if (parcelasTotal > 0) {
       for (let i = 0; i < parcelasTotal; i++) {
-        const paga = i < parcelasPagas;          // parcelas pagas = as primeiras N (ordem de pagamento)
-        if (paga) continue;
-        if (primeiraEmAberto < 0) primeiraEmAberto = i;
         const ds = venc[i] || "";
         const dt = parseDateBR(ds);
-        if (!dt) continue;
-        if (dt < hoje) vencidoValor += valorParcela;
-        else if (mesmoDia(dt, hoje)) venceHojeValor += valorParcela;
-        if (!proxData && dt >= hoje) { proxData = ds; proxValor = valorParcela; }
+        // quanto desta parcela já foi coberto pelo valor pago
+        const pagoNesta = Math.min(valorParcela, Math.max(0, restantePago));
+        restantePago -= pagoNesta;
+        const faltaNesta = Math.max(0, valorParcela - pagoNesta);
+        let pStatus;
+        if (faltaNesta <= 0.005) pStatus = "paga";
+        else if (pagoNesta > 0.005) pStatus = "parcial";
+        else pStatus = "aberta";
+        if (pStatus === "paga") parcelasQuitadas++;
+
+        // vencido / vence hoje consideram só o que FALTA na parcela
+        if (faltaNesta > 0.005 && dt) {
+          if (dt < hoje) vencidoValor += faltaNesta;
+          else if (mesmoDia(dt, hoje)) venceHojeValor += faltaNesta;
+          if (!proxData && dt >= hoje) { proxData = ds; proxValor = faltaNesta; }
+        }
+        parcInfo.push({ i, data: ds, dt, valor: valorParcela, pago: pagoNesta, falta: faltaNesta, status: pStatus });
       }
     }
+
+    const parcelasPagas = parcelasQuitadas;            // parcelas totalmente quitadas
+    const parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
 
     // ----- lucro: venda - custo -----
     const lucro = (Number(b.venda) || b.total) - (Number(b.custo) || 0);
@@ -1242,7 +1261,7 @@
       pagos: e.pagos,
       primeira: e.primeira, rotina: e.rotina, vencimentos: venc,
       valorParcela, vencidoValor, venceHojeValor, proxData, proxValor,
-      lucro
+      parcInfo, lucro
     };
   }
   function rows() { return base.map(compute); }
@@ -1289,9 +1308,9 @@
       const frag = document.createDocumentFragment();
       data.forEach((r, i) => {
         const tr = document.createElement("tr");
-        const parcInfo = r.parcelasTotal > 0
-          ? '<span class="parc-chip" title="Parcelas pagas / total">' + r.parcelasPagas + '/' + r.parcelasTotal + '</span>'
-          : (r.parcelasPagas > 0 ? '<span class="parc-chip muted" title="Pagamentos feitos">' + r.parcelasPagas + 'x</span>' : '');
+        const parcChip = r.parcelasTotal > 0
+          ? '<span class="parc-chip" title="Parcelas quitadas / total">' + r.parcelasPagas + '/' + r.parcelasTotal + '</span>'
+          : '';
         const diaInfo = r.dia ? '<span class="dia-chip" title="Dia de pagamento">dia ' + escapeHtml(r.dia) + '</span>' : '';
         const vencInfo = (r.vencidoValor > 0.005)
           ? '<span class="venc-chip atraso" title="Parcela em atraso">⚠ vencido</span>'
@@ -1300,7 +1319,7 @@
           '<td class="num">' + (i + 1) + '</td>' +
           '<td class="name">' + escapeHtml(r.nome) +
             (r.edited ? '<span class="edited-flag">• editado</span>' : '') +
-            ((diaInfo || parcInfo || vencInfo) ? '<div class="meta-chips">' + vencInfo + diaInfo + parcInfo + '</div>' : '') +
+            ((diaInfo || parcChip || vencInfo) ? '<div class="meta-chips">' + vencInfo + diaInfo + parcChip + '</div>' : '') +
           '</td>' +
           '<td data-label="Status"><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
           '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
@@ -1516,8 +1535,18 @@
   }
 
   function renderParcSummary(r, totalOverride) {
-    const pagas = r.parcelasPagas;
     const total = totalOverride != null ? totalOverride : r.parcelasTotal;
+    // recalcula quantas parcelas estão quitadas com base no total atual
+    let pagas = 0;
+    if (total > 0) {
+      const valorParcela = r.total / total;
+      let restante = r.recebido;
+      for (let i = 0; i < total; i++) {
+        const pago = Math.min(valorParcela, Math.max(0, restante));
+        restante -= pago;
+        if (valorParcela - pago <= 0.005) pagas++;
+      }
+    }
     const faltam = total > 0 ? Math.max(0, total - pagas) : 0;
     dParcSummary.innerHTML =
       '<div class="parc-box paid"><div class="pn">' + pagas + '</div><div class="pl">Parcelas pagas</div></div>' +
@@ -1534,22 +1563,40 @@
     dVencBlock.style.display = "block";
     dVencCount.textContent = total;
     const hoje = hojeMeiaNoite();
-    const valorParcela = total > 0 ? (r.saldoOrig / total) : 0;
+    // valor cheio de cada parcela = TOTAL da dívida ÷ parcelas
+    const valorParcela = total > 0 ? (r.total / total) : 0;
+    // distribui o que já foi recebido sobre as parcelas, na ordem
+    let restantePago = r.recebido;
     let html = "";
     for (let i = 0; i < total; i++) {
-      const paga = i < r.parcelasPagas;
       const ds = detVenc[i] || "";
       const dt = parseDateBR(ds);
-      let tag = "";
-      if (paga) tag = '<span class="vi-tag paga">paga</span>';
-      else if (dt && dt < hoje) tag = '<span class="vi-tag venc">vencida</span>';
-      else if (dt && mesmoDia(dt, hoje)) tag = '<span class="vi-tag hoje">hoje</span>';
+      const pagoNesta = Math.min(valorParcela, Math.max(0, restantePago));
+      restantePago -= pagoNesta;
+      const faltaNesta = Math.max(0, valorParcela - pagoNesta);
+
+      let tag, valTxt;
+      if (faltaNesta <= 0.005) {
+        tag = '<span class="vi-tag paga">paga</span>';
+        valTxt = fmtBRL.format(valorParcela);
+      } else if (pagoNesta > 0.005) {
+        // parcial: mostra quanto falta
+        tag = (dt && dt < hoje) ? '<span class="vi-tag venc">vencida</span>'
+            : (dt && mesmoDia(dt, hoje)) ? '<span class="vi-tag hoje">hoje</span>'
+            : '<span class="vi-tag parcial">parcial</span>';
+        valTxt = '<s>' + fmtBRL.format(valorParcela) + '</s> falta ' + fmtBRL.format(faltaNesta);
+      } else {
+        tag = (dt && dt < hoje) ? '<span class="vi-tag venc">vencida</span>'
+            : (dt && mesmoDia(dt, hoje)) ? '<span class="vi-tag hoje">hoje</span>'
+            : '';
+        valTxt = fmtBRL.format(valorParcela);
+      }
       html +=
         '<div class="venc-item">' +
           '<span class="vi-n">' + (i + 1) + '</span>' +
           '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"></span>' +
           tag +
-          '<span class="vi-val">' + fmtBRL.format(valorParcela) + '</span>' +
+          '<span class="vi-val">' + valTxt + '</span>' +
         '</div>';
     }
     dVencList.innerHTML = html;
