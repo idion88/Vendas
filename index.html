@@ -490,6 +490,13 @@
         <div class="quick" id="m-quick"></div>
       </div>
       <div class="field" style="margin-top:1rem">
+        <label for="m-data">Data do pagamento</label>
+        <div class="date-wrap">
+          <input id="m-data" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+          <button type="button" class="cal-btn" data-cal="m-data" title="Abrir calendário">📅</button>
+        </div>
+      </div>
+      <div class="field" style="margin-top:1rem">
         <label for="m-obs">Observação <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label>
         <input id="m-obs" type="text" placeholder="Ex: pago em dinheiro, parcela 3…" style="padding-left:.9rem;font-size:.92rem;font-weight:500">
         <div class="err" id="m-err"></div>
@@ -699,6 +706,7 @@
   };
 
   let supa = null;
+  let ultimoErroNuvem = "";
   function cloudEnabled() { return !!(supa && CLOUD_CONFIG.SUPABASE_URL && CLOUD_CONFIG.SUPABASE_KEY); }
 
   const RAW = [
@@ -1059,6 +1067,7 @@
       setSync("on");
     } catch (e) {
       console.error("Falha ao salvar na nuvem:", e);
+      ultimoErroNuvem = descreveErro(e);
       setSync("off");
       showToast("Sem conexão com a nuvem — salvo só neste aparelho.");
     }
@@ -1066,7 +1075,7 @@
 
   // lê da nuvem; se vazia, semeia com o que houver local
   async function pullFromCloud() {
-    if (!cloudEnabled()) return;
+    if (!cloudEnabled()) return false;
     setSync("syncing");
     try {
       const { data, error } = await supa
@@ -1079,15 +1088,39 @@
         const u = unwrap(data.payload);
         payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos;
         saveLocal();
+        rebuildBase();
       } else {
-        await supa.from(CLOUD_CONFIG.TABLE)
+        // linha ainda não existe na nuvem: cria com o que temos local (1ª vez)
+        const { error: upErr } = await supa.from(CLOUD_CONFIG.TABLE)
           .upsert({ id: CLOUD_CONFIG.ROW_ID, payload: wrap() }, { onConflict: "id" });
+        if (upErr) throw upErr;
       }
+      ultimoErroNuvem = "";
       setSync("on");
+      return true;
     } catch (e) {
       console.error("Falha ao ler da nuvem:", e);
+      ultimoErroNuvem = descreveErro(e);
       setSync("off");
+      return false;
     }
+  }
+
+  // traduz erros comuns do Supabase em mensagem clara
+  function descreveErro(e) {
+    const msg = (e && (e.message || e.hint || e.details || e.code)) ? String(e.message || e.code) : String(e);
+    const low = msg.toLowerCase();
+    if (low.includes("does not exist") || low.includes("relation") || (e && e.code === "42p01"))
+      return "A tabela 'crediado' não existe no Supabase. Crie a tabela (veja instruções).";
+    if (low.includes("column") && low.includes("payload"))
+      return "A coluna 'payload' não existe na tabela. Verifique a estrutura da tabela.";
+    if (low.includes("row-level security") || low.includes("rls") || low.includes("policy") || (e && e.code === "42501"))
+      return "Permissão negada (RLS). Falta criar a política de acesso na tabela.";
+    if (low.includes("jwt") || low.includes("api key") || low.includes("invalid"))
+      return "Chave de acesso inválida ou expirada.";
+    if (low.includes("failed to fetch") || low.includes("network"))
+      return "Sem internet ou o Supabase está fora do ar.";
+    return msg;
   }
 
   // badge de sincronização
@@ -1096,7 +1129,41 @@
   function setSync(mode) {
     syncEl.className = "sync " + mode;
     syncText.textContent = mode === "on" ? "Sincronizado" : mode === "syncing" ? "Sincronizando…" : "Local";
+    syncEl.style.cursor = "pointer";
   }
+  // clicar no selo mostra o diagnóstico
+  syncEl.addEventListener("click", async () => {
+    if (!CLOUD_CONFIG.SUPABASE_KEY) {
+      alert("A nuvem não está configurada (sem chave). O app está salvando só neste aparelho.");
+      return;
+    }
+    if (syncEl.classList.contains("on")) {
+      // tenta atualizar puxando da nuvem
+      const ok = await pullFromCloud();
+      if (ok) { render(); showToast("Dados atualizados da nuvem."); }
+      return;
+    }
+    // está em "Local": mostra o erro e como resolver
+    let msg = "⚠ O app NÃO está sincronizando com a nuvem.\n\n";
+    msg += "Motivo: " + (ultimoErroNuvem || "ainda não testado") + "\n\n";
+    if ((ultimoErroNuvem || "").includes("tabela 'crediado' não existe")) {
+      msg += "COMO RESOLVER:\n" +
+        "1. Entre no painel do Supabase (supabase.com)\n" +
+        "2. Abra seu projeto → menu 'SQL Editor'\n" +
+        "3. Cole o comando abaixo e clique em RUN:\n\n" +
+        "create table crediado (id integer primary key, payload jsonb);\n" +
+        "alter table crediado enable row level security;\n" +
+        "create policy acesso_total on crediado for all using (true) with check (true);\n\n" +
+        "4. Volte aqui e toque no selo de novo para reconectar.";
+    } else {
+      msg += "Toque em OK para tentar reconectar agora.";
+    }
+    if (confirm(msg)) {
+      const ok = await pullFromCloud();
+      if (ok) { render(); showToast("Reconectado! Dados sincronizados."); }
+      else showToast("Ainda não conectou: " + (ultimoErroNuvem || "erro desconhecido"));
+    }
+  });
 
   // ---------- tema claro/escuro ----------
   const THEME_KEY = "crediado_tema";
@@ -1487,6 +1554,7 @@
   const mDebt = document.getElementById("m-debt");
   const mAmount = document.getElementById("m-amount");
   const mObs = document.getElementById("m-obs");
+  const mData = document.getElementById("m-data");
   const mErr = document.getElementById("m-err");
   const mQuick = document.getElementById("m-quick");
   let activeKey = null;
@@ -1507,6 +1575,7 @@
     mDebt.textContent = fmtBRL.format(r.saldo);
     mAmount.value = "";
     mObs.value = "";
+    mData.value = hojeBR();
     mErr.textContent = "";
     const half = Math.round((r.saldo / 2) * 100) / 100;
     mQuick.innerHTML =
@@ -1536,7 +1605,9 @@
       return;
     }
     const e = entryFor(activeKey);
-    e.pagos.push({ valor: val, data: hojeBR(), obs: (mObs.value || "").trim() });
+    // usa a data informada; se inválida ou vazia, usa hoje
+    const dataPg = parseDateBR((mData.value || "").trim()) ? (mData.value || "").trim() : hojeBR();
+    e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
     persist();
     closeModal();
     render();
@@ -2428,10 +2499,29 @@
     await pullFromCloud();
     render();
     lock.classList.add("hide");
+    appLiberado = true;
   }
 
   lockEnter.addEventListener("click", enter);
   lockPass.addEventListener("keydown", e => { if (e.key === "Enter") enter(); });
+
+  // ---------- sincronização automática entre dispositivos ----------
+  let appLiberado = false;
+  async function sincronizarSilencioso() {
+    if (!appLiberado || !cloudEnabled()) return;
+    // não interrompe se algum modal estiver aberto (evita perder o que está digitando)
+    const modalAberto = document.querySelector(".overlay.show") || (lock && !lock.classList.contains("hide"));
+    if (modalAberto) return;
+    const ok = await pullFromCloud();
+    if (ok) render();
+  }
+  // ao voltar o foco para o app (trocar de aba/app e voltar)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") sincronizarSilencioso();
+  });
+  window.addEventListener("focus", sincronizarSilencioso);
+  // verificação periódica leve (a cada 25s)
+  setInterval(sincronizarSilencioso, 25000);
 
   // arranca
   initSupabase();
