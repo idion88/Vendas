@@ -124,14 +124,18 @@
   .lucro-sub{font-size:.76rem;color:var(--ink-soft);margin-top:.3rem}
   /* calendário nos campos de data */
   .date-wrap{position:relative}
-  .date-wrap input{padding-right:2.4rem!important}
-  .cal-btn{position:absolute;right:.4rem;top:50%;transform:translateY(-50%);border:none;background:transparent;
-    cursor:pointer;font-size:1.1rem;padding:.2rem;line-height:1;opacity:.7;transition:.15s}
-  .cal-btn:hover{opacity:1}
-  .vi-date{position:relative;display:inline-flex;align-items:center}
-  .cal-btn-sm{border:none;background:transparent;cursor:pointer;font-size:.95rem;padding:.1rem .2rem;line-height:1;opacity:.65;transition:.15s}
-  .cal-btn-sm:hover{opacity:1}
-  .hidden-date{position:fixed;opacity:0;pointer-events:none;width:0;height:0}
+  .date-wrap input[type=text]{padding-right:2.6rem!important}
+  .cal-btn{position:absolute;right:.3rem;top:50%;transform:translateY(-50%);border:none;background:var(--chip);
+    cursor:pointer;font-size:1.05rem;padding:.35rem .45rem;line-height:1;border-radius:8px;transition:.15s;
+    display:inline-flex;align-items:center;justify-content:center}
+  .cal-btn:hover{background:var(--brand);filter:brightness(1.05)}
+  /* o input date real fica invisível por cima do botão 📅, capturando o toque */
+  .cal-native{position:absolute;right:.3rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;
+    opacity:0;cursor:pointer;z-index:2;border:none;padding:0;margin:0}
+  .vi-date{position:relative;display:inline-flex;align-items:center;gap:.2rem}
+  .vi-date .vi-cal-wrap{position:relative;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center}
+  .vi-date .vi-cal-ic{font-size:.95rem;opacity:.7;pointer-events:none}
+  .vi-date .cal-native{width:1.6rem;height:1.6rem;right:0}
   .btn-danger{border:1px solid var(--debt);background:transparent;color:var(--debt);padding:.6rem 1rem;border-radius:10px;
     font-size:.85rem;font-weight:600;cursor:pointer;margin-right:auto}
   .btn-danger:hover{background:var(--debt);color:#fff}
@@ -223,6 +227,11 @@
   footer{padding:1rem clamp(1rem,3vw,2rem);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;
     gap:.6rem 1.5rem;align-items:center;justify-content:space-between;font-size:.82rem;color:var(--ink-soft);background:var(--surface-3)}
   footer .right{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+  .btn-sync-main{display:inline-flex;align-items:center;gap:.45rem;border:1px solid var(--brand);background:var(--brand);
+    color:#fff;padding:.5rem 1.1rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-sync-main:hover{background:var(--brand-dk);border-color:var(--brand-dk)}
+  .btn-sync-main.syncing svg{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .btn-ghost{border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);padding:.5rem .9rem;border-radius:9px;
     font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s}
   .btn-ghost:hover{border-color:var(--debt);color:var(--debt)}
@@ -389,7 +398,8 @@
   @media (max-width:640px){
     footer{flex-direction:column;align-items:stretch;gap:.7rem}
     footer .right{justify-content:space-between}
-    footer .right .btn-ghost,footer .right .btn-export{flex:1;justify-content:center;text-align:center}
+    footer .right .btn-ghost,footer .right .btn-export,footer .right .btn-sync-main{flex:1;justify-content:center;text-align:center}
+    .btn-sync-main{flex-basis:100%!important;order:-1}
   }
 </style>
 </head>
@@ -462,6 +472,10 @@
   <footer>
     <div><b id="visible-count">0</b> de <b id="total-count">0</b> fichas exibidas</div>
     <div class="right">
+      <button class="btn-sync-main" id="btn-sync">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9c-2.5 0-4.8-1-6.4-2.6L3 16"/><path d="M3 12a9 9 0 0 1 9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
+        Sincronizar
+      </button>
       <button class="btn-ghost" id="restore">Restaurar CSV</button>
       <button class="btn-ghost" id="reset">Desfazer pagamentos</button>
       <button class="btn-export" id="export">
@@ -493,7 +507,8 @@
         <label for="m-data">Data do pagamento</label>
         <div class="date-wrap">
           <input id="m-data" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
-          <button type="button" class="cal-btn" data-cal="m-data" title="Abrir calendário">📅</button>
+          <span class="cal-btn" aria-hidden="true">📅</span>
+          <input type="date" class="cal-native" data-target="m-data" title="Escolher data">
         </div>
       </div>
       <div class="field" style="margin-top:1rem">
@@ -535,7 +550,8 @@
           <label for="d-primeira">Data do 1º pagamento</label>
           <div class="date-wrap">
             <input id="d-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
-            <button type="button" class="cal-btn" data-cal="d-primeira" title="Abrir calendário">📅</button>
+            <span class="cal-btn" aria-hidden="true">📅</span>
+            <input type="date" class="cal-native" data-target="d-primeira" title="Escolher data">
           </div>
         </div>
         <div class="field">
@@ -658,7 +674,8 @@
           <label for="nv-primeira">Data do 1º pagamento</label>
           <div class="date-wrap">
             <input id="nv-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
-            <button type="button" class="cal-btn" data-cal="nv-primeira" title="Abrir calendário">📅</button>
+            <span class="cal-btn" aria-hidden="true">📅</span>
+            <input type="date" class="cal-native" data-target="nv-primeira" title="Escolher data">
           </div>
         </div>
         <div class="field">
@@ -684,8 +701,6 @@
     </div>
   </div>
 </div>
-
-<input type="date" id="hidden-date-picker" class="hidden-date">
 
 <script>
 (function () {
@@ -1723,7 +1738,7 @@
       html +=
         '<div class="venc-item">' +
           '<span class="vi-n">' + (i + 1) + '</span>' +
-          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"><button type="button" class="cal-btn-sm" data-cal-vi="' + i + '" title="Calendário">📅</button></span>' +
+          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-target-vi="' + i + '" title="Escolher data"></span></span>' +
           tag +
           '<span class="vi-val">' + valTxt + '</span>' +
         '</div>';
@@ -2357,55 +2372,50 @@
   document.getElementById("nv-cancel").addEventListener("click", closeNewSale);
   nvOverlay.addEventListener("click", e => { if (e.target === nvOverlay) closeNewSale(); });
 
-  // ---------- CALENDÁRIO (seletor de data) ----------
-  const datePicker = document.getElementById("hidden-date-picker");
-  let calTarget = null; // pode ser um id de input, ou {tipo:"vi", idx:n}
-
-  function abrirCalendario(currentBR) {
-    datePicker.value = brToISO(currentBR) || "";
-    // posiciona o picker próximo (ajuda em alguns navegadores) e abre
-    try {
-      if (typeof datePicker.showPicker === "function") datePicker.showPicker();
-      else { datePicker.focus(); datePicker.click(); }
-    } catch (e) { datePicker.focus(); datePicker.click(); }
+  // ---------- CALENDÁRIO (inputs date nativos sobrepostos) ----------
+  // Cada campo de data tem um <input type="date"> invisível por cima do ícone 📅.
+  // Ao tocar, o calendário do próprio aparelho abre (funciona em iOS/Android/PC).
+  // Antes de abrir, sincronizamos o valor atual do campo de texto para o date.
+  function sincronizarDateNative(nativo) {
+    if (nativo.dataset.target) {
+      const inp = document.getElementById(nativo.dataset.target);
+      nativo.value = inp ? (brToISO(inp.value) || "") : "";
+    } else if (nativo.dataset.targetVi != null) {
+      const idx = parseInt(nativo.dataset.targetVi);
+      nativo.value = brToISO(detVenc[idx] || "") || "";
+    }
   }
 
-  // clique nos botões de calendário (campos principais)
-  document.addEventListener("click", e => {
-    const calBtn = e.target.closest(".cal-btn");
-    if (calBtn) {
-      const targetId = calBtn.dataset.cal;
-      const inp = document.getElementById(targetId);
-      calTarget = targetId;
-      abrirCalendario(inp ? inp.value : "");
-      return;
-    }
-    const calBtnVi = e.target.closest(".cal-btn-sm");
-    if (calBtnVi) {
-      const idx = parseInt(calBtnVi.dataset.calVi);
-      calTarget = { tipo: "vi", idx };
-      abrirCalendario(detVenc[idx] || "");
-      return;
-    }
+  // delegação: quando o usuário interage com qualquer .cal-native
+  document.addEventListener("pointerdown", e => {
+    const nativo = e.target.closest(".cal-native");
+    if (nativo) sincronizarDateNative(nativo);
+  }, true);
+  // fallback para navegadores sem pointer events
+  document.addEventListener("focusin", e => {
+    const nativo = e.target.closest(".cal-native");
+    if (nativo) sincronizarDateNative(nativo);
   });
 
-  // quando escolhe a data no picker
-  datePicker.addEventListener("change", () => {
-    const br = isoToBR(datePicker.value);
-    if (!br || !calTarget) { calTarget = null; return; }
-    if (typeof calTarget === "string") {
-      const inp = document.getElementById(calTarget);
+  // quando muda qualquer input date nativo, escreve de volta no campo certo
+  document.addEventListener("change", e => {
+    const nativo = e.target.closest(".cal-native");
+    if (!nativo || !nativo.value) return;
+    const br = isoToBR(nativo.value);
+    if (!br) return;
+    if (nativo.dataset.target) {
+      const inp = document.getElementById(nativo.dataset.target);
       if (inp) {
         inp.value = br;
         inp.dispatchEvent(new Event("input", { bubbles: true }));
         inp.dispatchEvent(new Event("change", { bubbles: true }));
       }
-    } else if (calTarget.tipo === "vi") {
-      detVenc[calTarget.idx] = br;
+    } else if (nativo.dataset.targetVi != null) {
+      const idx = parseInt(nativo.dataset.targetVi);
+      detVenc[idx] = br;
       const b = base.find(x => x.key === detKey);
       if (b) renderVencList(compute(b));
     }
-    calTarget = null;
   });
 
   // ---------- toast ----------
@@ -2433,6 +2443,45 @@
       render();
       showToast("Pagamentos manuais desfeitos.");
     }
+  });
+
+  // ---------- botão SINCRONIZAR ----------
+  const btnSync = document.getElementById("btn-sync");
+  btnSync.addEventListener("click", async () => {
+    if (!CLOUD_CONFIG.SUPABASE_KEY) {
+      alert("A nuvem não está configurada. O app está salvando só neste aparelho.");
+      return;
+    }
+    if (!supa) initSupabase();
+    btnSync.classList.add("syncing");
+    btnSync.disabled = true;
+    // 1) tenta puxar da nuvem
+    const ok = await pullFromCloud();
+    if (!ok) {
+      btnSync.classList.remove("syncing");
+      btnSync.disabled = false;
+      let msg = "⚠ Não consegui sincronizar.\n\nMotivo: " + (ultimoErroNuvem || "desconhecido") + "\n\n";
+      if ((ultimoErroNuvem || "").includes("tabela 'crediado' não existe")) {
+        msg += "VOCÊ PRECISA CRIAR A TABELA (uma vez só):\n\n" +
+          "1. Acesse supabase.com e entre no seu projeto\n" +
+          "2. Menu lateral → SQL Editor\n" +
+          "3. Cole o texto abaixo e clique em RUN:\n\n" +
+          "create table crediado (id integer primary key, payload jsonb);\n" +
+          "alter table crediado enable row level security;\n" +
+          "create policy acesso_total on crediado for all using (true) with check (true);\n\n" +
+          "4. Volte e toque em Sincronizar de novo.";
+      }
+      alert(msg);
+      return;
+    }
+    // 2) re-renderiza com o que veio da nuvem
+    rebuildBase();
+    render();
+    // 3) garante que o que estava local também suba (merge: nuvem já foi lida; agora reenvia o estado atual)
+    await persist();
+    btnSync.classList.remove("syncing");
+    btnSync.disabled = false;
+    showToast("✓ Sincronizado com a nuvem. Dados atualizados.");
   });
 
   // ---------- exportar ----------
