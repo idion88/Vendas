@@ -47,6 +47,69 @@
     padding:.4rem .9rem;border-radius:999px;font-size:.8rem;color:var(--brand-dk);font-weight:600}
   .stamp b{background:var(--brand-dk);color:#fff;border-radius:999px;padding:.1rem .55rem;font-size:.7rem;letter-spacing:.04em}
 
+  /* ---- abas Gestão / Relatórios ---- */
+  .tabs{display:flex;gap:.3rem;padding:0 clamp(1rem,3vw,2rem);background:var(--paper);border-bottom:1px solid var(--line)}
+  .tab-btn{border:none;background:transparent;color:var(--ink-soft);font-size:.95rem;font-weight:700;cursor:pointer;
+    padding:.9rem 1.2rem;border-bottom:3px solid transparent;transition:.15s;margin-bottom:-1px}
+  .tab-btn:hover{color:var(--brand)}
+  .tab-btn.active{color:var(--brand-dk);border-bottom-color:var(--brand)}
+
+  /* ---- toolbar de relatórios ---- */
+  .rep-toolbar{padding:1.2rem clamp(1rem,3vw,2rem) 0;display:flex;flex-direction:column;gap:.8rem}
+  .rep-periods{display:flex;gap:.5rem;flex-wrap:wrap}
+  .rep-custom{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+  .rep-custom .date-wrap input[type=text]{width:140px}
+  .rep-range{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+  .btn-mini{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:.5rem 1rem;border-radius:9px;
+    font-size:.82rem;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-mini:hover{background:var(--brand-dk)}
+
+  /* ---- conteúdo dos relatórios ---- */
+  #rep-content{padding:1.4rem clamp(1rem,3vw,2rem) 2rem}
+  .rep-section-title{font-size:1.05rem;font-weight:800;margin:1.6rem 0 .9rem;color:var(--ink);display:flex;align-items:center;gap:.5rem}
+  .rep-section-title:first-child{margin-top:0}
+  .rep-section-sub{font-size:.82rem;font-weight:500;color:var(--ink-soft);margin-left:.3rem}
+  .rep-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.9rem}
+  .rep-card{border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.15rem;background:var(--paper);position:relative;overflow:hidden}
+  .rep-card .rc-label{font-size:.76rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;gap:.4rem}
+  .rep-card .rc-value{font-size:1.7rem;font-weight:800;margin-top:.4rem;font-variant-numeric:tabular-nums;line-height:1.1}
+  .rep-card .rc-sub{font-size:.78rem;color:var(--ink-soft);margin-top:.3rem}
+  .rep-card.accent-blue .rc-value{color:var(--brand)}
+  .rep-card.accent-green .rc-value{color:var(--paid)}
+  .rep-card.accent-gold .rc-value{color:var(--gold)}
+  .rep-card.accent-red .rc-value{color:var(--debt)}
+  .rep-card.accent-orange .rc-value{color:var(--pending)}
+  .rep-card .rc-dot{width:9px;height:9px;border-radius:50%}
+  .rc-dot.blue{background:var(--brand)} .rc-dot.green{background:var(--paid)} .rc-dot.gold{background:var(--gold)}
+  .rc-dot.red{background:var(--debt)} .rc-dot.orange{background:var(--pending)}
+  .rep-card.big{grid-column:1/-1}
+
+  /* gráfico de barras mensais */
+  .rep-chart{border:1px solid var(--line);border-radius:14px;padding:1.2rem;background:var(--paper)}
+  .bars{display:flex;align-items:flex-end;gap:.5rem;height:200px;margin-top:1rem;padding-bottom:1.8rem;position:relative}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;min-width:0}
+  .bar-fill{width:70%;max-width:48px;background:linear-gradient(180deg,var(--brand),var(--brand-dk));border-radius:6px 6px 0 0;
+    transition:.3s;min-height:2px;position:relative}
+  .bar-fill.recebido{background:linear-gradient(180deg,var(--paid),#177a40)}
+  .bar-col .bar-label{position:absolute;bottom:-1.6rem;font-size:.68rem;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+  .bar-col .bar-val{position:absolute;top:-1.3rem;font-size:.66rem;font-weight:700;color:var(--ink);white-space:nowrap;opacity:0;transition:.15s}
+  .bar-col:hover .bar-val{opacity:1}
+  .chart-legend{display:flex;gap:1.2rem;margin-top:.5rem;font-size:.78rem;color:var(--ink-soft);flex-wrap:wrap}
+  .chart-legend span{display:inline-flex;align-items:center;gap:.4rem}
+  .leg-dot{width:10px;height:10px;border-radius:3px}
+
+  /* lista top clientes */
+  .rep-list{border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden}
+  .rep-list-row{display:flex;align-items:center;gap:.8rem;padding:.75rem 1.1rem;border-bottom:1px solid var(--line-soft)}
+  .rep-list-row:last-child{border-bottom:none}
+  .rep-list-row .rl-rank{width:26px;height:26px;border-radius:50%;background:var(--chip);color:var(--brand-dk);
+    display:grid;place-items:center;font-size:.78rem;font-weight:800;flex-shrink:0}
+  .rep-list-row .rl-name{font-weight:600;font-size:.9rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rep-list-row .rl-val{font-weight:700;font-variant-numeric:tabular-nums;font-size:.9rem}
+  .rep-list-row .rl-bar{height:6px;background:var(--chip);border-radius:3px;width:80px;overflow:hidden;flex-shrink:0}
+  .rep-list-row .rl-bar-fill{height:100%;background:var(--brand);border-radius:3px}
+  .rep-empty{text-align:center;color:var(--ink-soft);font-size:.9rem;padding:2.5rem 1rem}
+
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.9rem;
     padding:1.4rem clamp(1rem,3vw,2rem);border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--kpi-grad-a),var(--kpi-grad-b))}
   .kpi{border:1px solid var(--line);border-radius:14px;padding:.95rem 1.05rem;background:var(--paper)}
@@ -430,6 +493,12 @@
     </div>
   </header>
 
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-view="gestao">📋 Gestão</button>
+    <button class="tab-btn" data-view="relatorios">📊 Relatórios</button>
+  </div>
+
+  <div id="view-gestao">
   <section class="kpis" id="kpis"></section>
 
   <div class="toolbar">
@@ -484,6 +553,36 @@
       </button>
     </div>
   </footer>
+  </div><!-- /view-gestao -->
+
+  <div id="view-relatorios" style="display:none">
+    <div class="rep-toolbar">
+      <div class="rep-periods" id="rep-periods">
+        <button class="chip-btn active" data-per="mes">Este mês</button>
+        <button class="chip-btn" data-per="mespassado">Mês passado</button>
+        <button class="chip-btn" data-per="ano">Este ano</button>
+        <button class="chip-btn" data-per="tudo">Tudo</button>
+        <button class="chip-btn" data-per="custom">Personalizado</button>
+      </div>
+      <div class="rep-custom" id="rep-custom" style="display:none">
+        <div class="date-wrap">
+          <input id="rep-ini" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10">
+          <span class="cal-btn" aria-hidden="true">📅</span>
+          <input type="date" class="cal-native" data-target="rep-ini" title="Data inicial">
+        </div>
+        <span style="color:var(--ink-soft)">até</span>
+        <div class="date-wrap">
+          <input id="rep-fim" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10">
+          <span class="cal-btn" aria-hidden="true">📅</span>
+          <input type="date" class="cal-native" data-target="rep-fim" title="Data final">
+        </div>
+        <button class="btn-mini" id="rep-aplicar">Aplicar</button>
+      </div>
+      <div class="rep-range" id="rep-range"></div>
+    </div>
+
+    <div id="rep-content"></div>
+  </div><!-- /view-relatorios -->
 </div>
 
 <!-- modal pagamento -->
@@ -2417,6 +2516,210 @@
       if (b) renderVencList(compute(b));
     }
   });
+
+  // ====================== RELATÓRIOS ======================
+  const repState = { per: "mes", ini: null, fim: null };
+
+  // troca de abas
+  document.getElementById("tabs").addEventListener("click", e => {
+    const btn = e.target.closest(".tab-btn");
+    if (!btn) return;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const view = btn.dataset.view;
+    document.getElementById("view-gestao").style.display = view === "gestao" ? "" : "none";
+    document.getElementById("view-relatorios").style.display = view === "relatorios" ? "" : "none";
+    if (view === "relatorios") renderRelatorios();
+  });
+
+  // seleção de período
+  document.getElementById("rep-periods").addEventListener("click", e => {
+    const btn = e.target.closest(".chip-btn");
+    if (!btn) return;
+    document.querySelectorAll("#rep-periods .chip-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    repState.per = btn.dataset.per;
+    document.getElementById("rep-custom").style.display = repState.per === "custom" ? "flex" : "none";
+    if (repState.per !== "custom") renderRelatorios();
+  });
+  document.getElementById("rep-aplicar").addEventListener("click", () => {
+    const ini = parseDateBR(document.getElementById("rep-ini").value);
+    const fim = parseDateBR(document.getElementById("rep-fim").value);
+    repState.ini = ini ? new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()) : null;
+    repState.fim = fim ? new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59) : null;
+    renderRelatorios();
+  });
+
+  // calcula o intervalo [ini,fim] conforme o período escolhido
+  function periodoAtual() {
+    const hoje = new Date();
+    const y = hoje.getFullYear(), m = hoje.getMonth();
+    if (repState.per === "mes")
+      return { ini: new Date(y, m, 1), fim: new Date(y, m + 1, 0, 23, 59, 59), label: "Este mês" };
+    if (repState.per === "mespassado")
+      return { ini: new Date(y, m - 1, 1), fim: new Date(y, m, 0, 23, 59, 59), label: "Mês passado" };
+    if (repState.per === "ano")
+      return { ini: new Date(y, 0, 1), fim: new Date(y, 11, 31, 23, 59, 59), label: "Este ano (" + y + ")" };
+    if (repState.per === "tudo")
+      return { ini: null, fim: null, label: "Todo o período" };
+    // custom
+    return { ini: repState.ini, fim: repState.fim, label: "Período personalizado" };
+  }
+
+  function dentroPeriodo(dt, ini, fim) {
+    if (!dt) return false;
+    if (ini && dt < ini) return false;
+    if (fim && dt > fim) return false;
+    return true;
+  }
+
+  // motor de agregação
+  function gerarRelatorio(ini, fim) {
+    const all = rows();
+    let vendasFeitas = 0, vendasCount = 0, vendasNovasFeitas = 0, vendasNovasCount = 0;
+    let custoPeriodo = 0, lucroPrevisto = 0;
+    let recebidoPeriodo = 0, lucroRecebido = 0;
+    const topClientes = {};      // recebido no período por cliente
+    const recebidoPorMes = {};   // "aaaa-mm" -> total recebido
+
+    all.forEach(f => {
+      const dtCriacao = parseDateBR(f.data);
+      // ÂNGULO 1: vendas feitas no período (por data de criação)
+      if (dentroPeriodo(dtCriacao, ini, fim)) {
+        vendasFeitas += f.total;
+        vendasCount++;
+        if (f.novaVenda) {
+          vendasNovasFeitas += f.venda;
+          vendasNovasCount++;
+          custoPeriodo += (f.custo || 0);
+          lucroPrevisto += (f.venda - (f.custo || 0));
+        }
+      }
+      // ÂNGULO 2: dinheiro recebido no período (por data de cada pagamento)
+      (f.pagos || []).forEach(p => {
+        const dtPg = parseDateBR(p.data);
+        if (dentroPeriodo(dtPg, ini, fim)) {
+          const v = Number(p.valor) || 0;
+          recebidoPeriodo += v;
+          topClientes[f.nome] = (topClientes[f.nome] || 0) + v;
+          const chave = dtPg.getFullYear() + "-" + String(dtPg.getMonth() + 1).padStart(2, "0");
+          recebidoPorMes[chave] = (recebidoPorMes[chave] || 0) + v;
+          // lucro proporcional ao recebido (só vendas novas com custo)
+          if (f.novaVenda && f.venda > 0) {
+            lucroRecebido += v * ((f.venda - (f.custo || 0)) / f.venda);
+          }
+        }
+      });
+    });
+
+    return {
+      vendasFeitas, vendasCount, vendasNovasFeitas, vendasNovasCount,
+      custoPeriodo, lucroPrevisto, recebidoPeriodo, lucroRecebido,
+      topClientes, recebidoPorMes
+    };
+  }
+
+  function renderRelatorios() {
+    const p = periodoAtual();
+    const rangeEl = document.getElementById("rep-range");
+    if (p.per === "custom" && (!p.ini || !p.fim)) {
+      rangeEl.textContent = "Escolha as datas inicial e final e toque em Aplicar.";
+    } else {
+      const fmtD = d => d ? (String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear()) : "início";
+      rangeEl.textContent = p.ini || p.fim ? ("Período: " + fmtD(p.ini) + " até " + fmtD(p.fim)) : "Mostrando todos os registros";
+    }
+    const r = gerarRelatorio(p.ini, p.fim);
+    const margemMedia = r.vendasNovasFeitas > 0 ? Math.round((r.lucroPrevisto / r.vendasNovasFeitas) * 100) : 0;
+
+    let html = "";
+
+    // SEÇÃO 1: vendas feitas no período
+    html += '<div class="rep-section-title">🛒 Vendas feitas no período <span class="rep-section-sub">(pela data da venda)</span></div>';
+    html += '<div class="rep-cards">';
+    html += card("blue", "Total vendido", fmtBRL.format(r.vendasFeitas), r.vendasCount + " venda(s) no período");
+    html += card("gold", "Vendas novas", fmtBRL.format(r.vendasNovasFeitas), r.vendasNovasCount + " com custo registrado");
+    html += card("orange", "Custo das mercadorias", fmtBRL.format(r.custoPeriodo), "investido nas vendas novas");
+    html += card("green", "Lucro previsto", fmtBRL.format(r.lucroPrevisto), "se receber tudo · margem " + margemMedia + "%");
+    html += '</div>';
+
+    // SEÇÃO 2: dinheiro recebido no período
+    html += '<div class="rep-section-title">💰 Dinheiro recebido no período <span class="rep-section-sub">(pela data dos pagamentos)</span></div>';
+    html += '<div class="rep-cards">';
+    html += card("green", "Total recebido", fmtBRL.format(r.recebidoPeriodo), "entrou no caixa no período");
+    html += card("gold", "Lucro real recebido", fmtBRL.format(r.lucroRecebido), "parte do recebido que é lucro");
+    const ticket = r.vendasCount > 0 ? r.vendasFeitas / r.vendasCount : 0;
+    html += card("blue", "Ticket médio", fmtBRL.format(ticket), "valor médio por venda");
+    html += '</div>';
+
+    // SEÇÃO 3: gráfico de recebido por mês (sempre dos últimos 6 meses, independente do filtro)
+    html += '<div class="rep-section-title">📈 Recebimentos por mês <span class="rep-section-sub">(últimos 6 meses)</span></div>';
+    html += renderGraficoMeses();
+
+    // SEÇÃO 4: top clientes do período
+    html += '<div class="rep-section-title">🏆 Quem mais pagou no período</div>';
+    html += renderTopClientes(r.topClientes);
+
+    document.getElementById("rep-content").innerHTML = html;
+  }
+
+  function card(accent, label, value, sub) {
+    return '<div class="rep-card accent-' + accent + '">' +
+      '<div class="rc-label"><span class="rc-dot ' + accent + '"></span>' + label + '</div>' +
+      '<div class="rc-value">' + value + '</div>' +
+      '<div class="rc-sub">' + sub + '</div></div>';
+  }
+
+  // gráfico de barras: recebido nos últimos 6 meses
+  function renderGraficoMeses() {
+    const all = rows();
+    const hoje = new Date();
+    const meses = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push({ chave: d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"),
+                   label: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""), total: 0 });
+    }
+    const idx = {};
+    meses.forEach((m, i) => idx[m.chave] = i);
+    all.forEach(f => {
+      (f.pagos || []).forEach(p => {
+        const dt = parseDateBR(p.data);
+        if (!dt) return;
+        const ch = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
+        if (idx[ch] != null) meses[idx[ch]].total += (Number(p.valor) || 0);
+      });
+    });
+    const max = Math.max(1, ...meses.map(m => m.total));
+    let bars = '<div class="rep-chart"><div class="bars">';
+    meses.forEach(m => {
+      const h = Math.round((m.total / max) * 100);
+      bars += '<div class="bar-col">' +
+        '<div class="bar-val">' + fmtBRL.format(m.total) + '</div>' +
+        '<div class="bar-fill recebido" style="height:' + h + '%"></div>' +
+        '<div class="bar-label">' + m.label + '</div></div>';
+    });
+    bars += '</div><div class="chart-legend"><span><span class="leg-dot" style="background:var(--paid)"></span>Recebido no mês</span>' +
+      '<span style="margin-left:auto">Passe o dedo/mouse nas barras para ver os valores</span></div></div>';
+    return bars;
+  }
+
+  function renderTopClientes(topObj) {
+    const arr = Object.entries(topObj).map(([nome, val]) => ({ nome, val }))
+      .sort((a, b) => b.val - a.val).slice(0, 8);
+    if (!arr.length) return '<div class="rep-list"><div class="rep-empty">Nenhum pagamento recebido neste período.</div></div>';
+    const max = arr[0].val || 1;
+    let html = '<div class="rep-list">';
+    arr.forEach((c, i) => {
+      const w = Math.round((c.val / max) * 100);
+      html += '<div class="rep-list-row">' +
+        '<span class="rl-rank">' + (i + 1) + '</span>' +
+        '<span class="rl-name">' + escapeHtml(c.nome) + '</span>' +
+        '<span class="rl-bar"><span class="rl-bar-fill" style="width:' + w + '%"></span></span>' +
+        '<span class="rl-val">' + fmtBRL.format(c.val) + '</span></div>';
+    });
+    html += '</div>';
+    return html;
+  }
 
   // ---------- toast ----------
   const toastEl = document.getElementById("toast");
