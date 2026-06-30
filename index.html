@@ -122,6 +122,16 @@
   .lucro-row b{font-size:1.4rem;color:var(--paid);font-variant-numeric:tabular-nums}
   .lucro-row b.neg{color:var(--debt)}
   .lucro-sub{font-size:.76rem;color:var(--ink-soft);margin-top:.3rem}
+  /* calendário nos campos de data */
+  .date-wrap{position:relative}
+  .date-wrap input{padding-right:2.4rem!important}
+  .cal-btn{position:absolute;right:.4rem;top:50%;transform:translateY(-50%);border:none;background:transparent;
+    cursor:pointer;font-size:1.1rem;padding:.2rem;line-height:1;opacity:.7;transition:.15s}
+  .cal-btn:hover{opacity:1}
+  .vi-date{position:relative;display:inline-flex;align-items:center}
+  .cal-btn-sm{border:none;background:transparent;cursor:pointer;font-size:.95rem;padding:.1rem .2rem;line-height:1;opacity:.65;transition:.15s}
+  .cal-btn-sm:hover{opacity:1}
+  .hidden-date{position:fixed;opacity:0;pointer-events:none;width:0;height:0}
   .btn-danger{border:1px solid var(--debt);background:transparent;color:var(--debt);padding:.6rem 1rem;border-radius:10px;
     font-size:.85rem;font-weight:600;cursor:pointer;margin-right:auto}
   .btn-danger:hover{background:var(--debt);color:#fff}
@@ -183,7 +193,7 @@
     display:grid;place-items:center;font-size:.72rem;font-weight:700;flex-shrink:0}
   .venc-item .vi-date{font-weight:600;font-variant-numeric:tabular-nums}
   .venc-item .vi-date input{border:1px solid var(--line);background:var(--input-bg);color:var(--ink);
-    border-radius:7px;padding:.3rem .5rem;font-size:.82rem;width:120px;text-align:center;font-variant-numeric:tabular-nums}
+    border-radius:7px;padding:.3rem .4rem;font-size:.82rem;width:104px;text-align:center;font-variant-numeric:tabular-nums}
   .venc-item .vi-val{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-soft);font-weight:600}
   .venc-item .vi-tag{font-size:.66rem;font-weight:700;padding:.12rem .45rem;border-radius:999px;white-space:nowrap}
   .vi-tag.paga{background:#e8f6ee;color:var(--paid)}
@@ -507,11 +517,19 @@
         <div class="mstat debt"><div class="l">Falta pagar</div><div class="v" id="d-debt">—</div></div>
       </div>
 
+      <div class="field" style="margin-bottom:1rem">
+        <label for="d-nome">Nome do cliente</label>
+        <input id="d-nome" type="text" placeholder="Nome do cliente" style="padding-left:.9rem;font-size:1rem">
+      </div>
+
       <div class="sec-title">📅 Editar compra (parcelas e vencimentos)</div>
       <div class="det-grid">
         <div class="field">
           <label for="d-primeira">Data do 1º pagamento</label>
-          <input id="d-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+          <div class="date-wrap">
+            <input id="d-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+            <button type="button" class="cal-btn" data-cal="d-primeira" title="Abrir calendário">📅</button>
+          </div>
         </div>
         <div class="field">
           <label for="d-parcelas">Nº de parcelas</label>
@@ -556,7 +574,7 @@
       <div class="hist-list" id="d-hist"></div>
     </div>
     <div class="modal-foot">
-      <button class="btn-danger" id="d-delete" style="display:none">Excluir venda</button>
+      <button class="btn-danger" id="d-delete">Excluir cliente</button>
       <button class="btn-cancel" id="d-close">Fechar</button>
       <button class="btn-confirm" id="d-save">Salvar alterações</button>
     </div>
@@ -631,7 +649,10 @@
       <div class="det-grid">
         <div class="field">
           <label for="nv-primeira">Data do 1º pagamento</label>
-          <input id="nv-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+          <div class="date-wrap">
+            <input id="nv-primeira" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" style="padding-left:.9rem;text-align:center;font-size:1rem">
+            <button type="button" class="cal-btn" data-cal="nv-primeira" title="Abrir calendário">📅</button>
+          </div>
         </div>
         <div class="field">
           <label for="nv-parcelas">Nº de parcelas</label>
@@ -656,6 +677,8 @@
     </div>
   </div>
 </div>
+
+<input type="date" id="hidden-date-picker" class="hidden-date">
 
 <script>
 (function () {
@@ -987,31 +1010,35 @@
   }
 
   // ---------- persistência (nuvem + local) ----------
-  // payload sincronizado = { pagamentos: {key:{...}}, vendas: [ {id,nome,custo,venda,data,...} ] }
-  // (retrocompatível: se vier o formato antigo {key:{...}} direto, é tratado como pagamentos)
+  // payload sincronizado = { pagamentos:{...}, vendas:[...], nomes:{key:nome}, excluidos:[key] }
+  // (retrocompatível: formato antigo {key:{...}} direto é tratado como pagamentos)
   let payments = {};      // { key: entry }
   let novasVendas = [];   // vendas criadas dentro do app
+  let nomesEditados = {}; // { key: nomeNovo }
+  let excluidos = [];     // [ key, ... ] fichas removidas
 
   function unwrap(payload) {
-    if (!payload || typeof payload !== "object") return { pagamentos: {}, vendas: [] };
+    if (!payload || typeof payload !== "object") return { pagamentos: {}, vendas: [], nomes: {}, excluidos: [] };
     // formato novo
-    if (payload.pagamentos || payload.vendas) {
+    if (payload.pagamentos || payload.vendas || payload.nomes || payload.excluidos) {
       return {
         pagamentos: (payload.pagamentos && typeof payload.pagamentos === "object") ? payload.pagamentos : {},
-        vendas: Array.isArray(payload.vendas) ? payload.vendas : []
+        vendas: Array.isArray(payload.vendas) ? payload.vendas : [],
+        nomes: (payload.nomes && typeof payload.nomes === "object") ? payload.nomes : {},
+        excluidos: Array.isArray(payload.excluidos) ? payload.excluidos : []
       };
     }
     // formato antigo: o objeto inteiro era o "payments"
-    return { pagamentos: payload, vendas: [] };
+    return { pagamentos: payload, vendas: [], nomes: {}, excluidos: [] };
   }
-  function wrap() { return { pagamentos: payments, vendas: novasVendas }; }
+  function wrap() { return { pagamentos: payments, vendas: novasVendas, nomes: nomesEditados, excluidos: excluidos }; }
 
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const u = unwrap(raw ? JSON.parse(raw) : null);
-      payments = u.pagamentos; novasVendas = u.vendas;
-    } catch (e) { payments = {}; novasVendas = []; }
+      payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos;
+    } catch (e) { payments = {}; novasVendas = []; nomesEditados = {}; excluidos = []; }
   }
   function saveLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(wrap())); }
@@ -1050,7 +1077,7 @@
       if (error) throw error;
       if (data && data.payload && typeof data.payload === "object") {
         const u = unwrap(data.payload);
-        payments = u.pagamentos; novasVendas = u.vendas;
+        payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos;
         saveLocal();
       } else {
         await supa.from(CLOUD_CONFIG.TABLE)
@@ -1133,9 +1160,14 @@
   }
 
   // base = fichas originais + vendas novas (recriada quando há mudança)
+  // aplica nomes editados e remove fichas excluídas
   let base = baseRAW.slice();
   function rebuildBase() {
-    base = baseRAW.concat(novasVendas.map(vendaToFicha));
+    const excluidosSet = new Set(excluidos);
+    const todas = baseRAW.concat(novasVendas.map(vendaToFicha));
+    base = todas
+      .filter(f => !excluidosSet.has(f.key))
+      .map(f => nomesEditados[f.key] ? { ...f, nome: nomesEditados[f.key] } : f);
   }
   rebuildBase();
 
@@ -1180,6 +1212,18 @@
   function fmtDateBR(dt) {
     return String(dt.getDate()).padStart(2, "0") + "/" +
            String(dt.getMonth() + 1).padStart(2, "0") + "/" + dt.getFullYear();
+  }
+  // converte dd/mm/aaaa -> aaaa-mm-dd (para o input date) e vice-versa
+  function brToISO(s) {
+    const dt = parseDateBR(s);
+    if (!dt) return "";
+    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  }
+  function isoToBR(s) {
+    if (!s) return "";
+    const [y, m, d] = s.split("-").map(Number);
+    if (!y || !m || !d) return "";
+    return String(d).padStart(2, "0") + "/" + String(m).padStart(2, "0") + "/" + y;
   }
   function addMonthsClamp(dt, n, anchorDay) {
     const target = new Date(dt.getFullYear(), dt.getMonth() + n, 1);
@@ -1524,6 +1568,7 @@
   // ---------- modal de DETALHES ----------
   const detOverlay = document.getElementById("det-overlay");
   const dClient = document.getElementById("d-client");
+  const dNome = document.getElementById("d-nome");
   const dPaid = document.getElementById("d-paid");
   const dDebt = document.getElementById("d-debt");
   const dDia = document.getElementById("d-dia");
@@ -1607,7 +1652,7 @@
       html +=
         '<div class="venc-item">' +
           '<span class="vi-n">' + (i + 1) + '</span>' +
-          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"></span>' +
+          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"><button type="button" class="cal-btn-sm" data-cal-vi="' + i + '" title="Calendário">📅</button></span>' +
           tag +
           '<span class="vi-val">' + valTxt + '</span>' +
         '</div>';
@@ -1640,6 +1685,7 @@
     const e = entryFor(key);
     const r = compute(b);
     dClient.textContent = r.nome;
+    dNome.value = r.nome;
     dPaid.textContent = fmtBRL.format(r.recebido);
     dDebt.textContent = fmtBRL.format(r.saldo);
     dParcelas.value = e.parcelas > 0 ? String(e.parcelas) : "";
@@ -1650,9 +1696,6 @@
     detVenc = (e.vencimentos || []).slice();
     dParcHint.textContent = "";
     dParcHint.classList.remove("warn");
-    // botão excluir só aparece em vendas criadas no app
-    const delBtn = document.getElementById("d-delete");
-    delBtn.style.display = b.novaVenda ? "inline-block" : "none";
     renderParcSummary(r);
     renderVencList(r);
     renderHist(r);
@@ -1660,19 +1703,27 @@
   }
   function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
 
-  // excluir venda criada no app
+  // excluir cliente (qualquer ficha: original ou venda nova)
   document.getElementById("d-delete").addEventListener("click", () => {
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
-    if (!b || !b.novaVenda) return;
-    if (confirm('Excluir a venda "' + b.nome + '"? Isso remove a ficha e todos os pagamentos dela. Não pode ser desfeito.')) {
-      novasVendas = novasVendas.filter(v => v.id !== detKey);
+    if (!b) return;
+    if (confirm('Excluir o cliente "' + b.nome + '"?\n\nIsso remove a ficha da lista e apaga os pagamentos e parcelas registrados dele. Esta ação não pode ser desfeita.')) {
+      // remove dados registrados
       delete payments[detKey];
+      delete nomesEditados[detKey];
+      if (b.novaVenda) {
+        // venda criada no app: some de vez
+        novasVendas = novasVendas.filter(v => v.id !== detKey);
+      } else {
+        // ficha original do CSV: marca como excluída pra não reaparecer
+        if (!excluidos.includes(detKey)) excluidos.push(detKey);
+      }
       rebuildBase();
       persist();
       closeDetails();
       render();
-      showToast("Venda excluída.");
+      showToast("Cliente excluído.");
     }
   });
 
@@ -1741,7 +1792,21 @@
 
   function saveDetails() {
     if (!detKey) return;
+    const b = base.find(x => x.key === detKey);
     const e = entryFor(detKey);
+    // nome editado
+    const nomeNovo = (dNome.value || "").trim();
+    if (nomeNovo && b && nomeNovo !== b.nome) {
+      if (b.novaVenda) {
+        const v = novasVendas.find(x => x.id === detKey);
+        if (v) v.nome = nomeNovo;
+      } else {
+        nomesEditados[detKey] = nomeNovo;
+      }
+    } else if (!nomeNovo) {
+      // nome apagado: volta ao original (remove edição)
+      delete nomesEditados[detKey];
+    }
     const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
     e.parcelas = total;
     e.primeira = (dPrimeira.value || "").trim().replace(/[^\d/]/g, "");
@@ -1750,10 +1815,11 @@
     // guarda vencimentos do tamanho do total
     e.vencimentos = [];
     for (let i = 0; i < total; i++) e.vencimentos.push((detVenc[i] || "").trim());
+    rebuildBase();
     persist();
     closeDetails();
     render();
-    showToast("Compra atualizada.");
+    showToast("Ficha atualizada.");
   }
 
   // remover um pagamento do histórico
@@ -2008,9 +2074,15 @@
       // zera só os pagamentos das fichas originais; preserva vendas novas e suas parcelas
       const ids = new Set(novasVendas.map(v => v.id));
       Object.keys(payments).forEach(k => { if (!ids.has(k)) delete payments[k]; });
+      // restaura nomes e clientes excluídos das fichas originais
+      const idsVenda = new Set(novasVendas.map(v => v.id));
+      Object.keys(nomesEditados).forEach(k => { if (!idsVenda.has(k)) delete nomesEditados[k]; });
+      excluidos = [];
     } else {
       payments = {};
       novasVendas = [];
+      nomesEditados = {};
+      excluidos = [];
     }
     rebuildBase();
     persist();
@@ -2213,6 +2285,57 @@
   document.getElementById("nv-save").addEventListener("click", salvarNovaVenda);
   document.getElementById("nv-cancel").addEventListener("click", closeNewSale);
   nvOverlay.addEventListener("click", e => { if (e.target === nvOverlay) closeNewSale(); });
+
+  // ---------- CALENDÁRIO (seletor de data) ----------
+  const datePicker = document.getElementById("hidden-date-picker");
+  let calTarget = null; // pode ser um id de input, ou {tipo:"vi", idx:n}
+
+  function abrirCalendario(currentBR) {
+    datePicker.value = brToISO(currentBR) || "";
+    // posiciona o picker próximo (ajuda em alguns navegadores) e abre
+    try {
+      if (typeof datePicker.showPicker === "function") datePicker.showPicker();
+      else { datePicker.focus(); datePicker.click(); }
+    } catch (e) { datePicker.focus(); datePicker.click(); }
+  }
+
+  // clique nos botões de calendário (campos principais)
+  document.addEventListener("click", e => {
+    const calBtn = e.target.closest(".cal-btn");
+    if (calBtn) {
+      const targetId = calBtn.dataset.cal;
+      const inp = document.getElementById(targetId);
+      calTarget = targetId;
+      abrirCalendario(inp ? inp.value : "");
+      return;
+    }
+    const calBtnVi = e.target.closest(".cal-btn-sm");
+    if (calBtnVi) {
+      const idx = parseInt(calBtnVi.dataset.calVi);
+      calTarget = { tipo: "vi", idx };
+      abrirCalendario(detVenc[idx] || "");
+      return;
+    }
+  });
+
+  // quando escolhe a data no picker
+  datePicker.addEventListener("change", () => {
+    const br = isoToBR(datePicker.value);
+    if (!br || !calTarget) { calTarget = null; return; }
+    if (typeof calTarget === "string") {
+      const inp = document.getElementById(calTarget);
+      if (inp) {
+        inp.value = br;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+        inp.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } else if (calTarget.tipo === "vi") {
+      detVenc[calTarget.idx] = br;
+      const b = base.find(x => x.key === detKey);
+      if (b) renderVencList(compute(b));
+    }
+    calTarget = null;
+  });
 
   // ---------- toast ----------
   const toastEl = document.getElementById("toast");
