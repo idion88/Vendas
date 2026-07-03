@@ -216,6 +216,24 @@
   html[data-theme="dark"] .venc-chip.atraso{background:#3a1f25} html[data-theme="dark"] .venc-chip.hoje{background:#3a2e1a}
 
   .modal-lg{max-width:520px}
+  /* botão fechar flutuante (discreto, fixo no topo do modal) */
+  .modal-float-close{position:sticky;top:.4rem;z-index:20;height:0;display:flex;justify-content:flex-end;
+    padding:0 .55rem;pointer-events:none}
+  .modal-float-close button{pointer-events:auto;width:36px;height:36px;border-radius:50%;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);font-size:1.3rem;
+    line-height:1;cursor:pointer;box-shadow:0 2px 10px -2px rgba(16,40,70,.35);
+    display:grid;place-items:center;transition:.15s}
+  .modal-float-close button:hover{background:var(--debt);color:#fff;border-color:var(--debt);transform:scale(1.05)}
+  /* ---- lixeira ---- */
+  .lix-item{display:flex;align-items:center;gap:.7rem;border:1px solid var(--line);border-radius:11px;
+    padding:.7rem .8rem;background:var(--surface-3);margin-bottom:.5rem}
+  .lix-item input[type=checkbox]{width:20px;height:20px;flex-shrink:0;cursor:pointer;accent-color:var(--brand)}
+  .lix-item .lix-info{flex:1;min-width:0}
+  .lix-item .lix-nome{font-weight:600;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lix-item .lix-meta{font-size:.74rem;color:var(--ink-soft);margin-top:.15rem}
+  .lix-item .lix-tag{font-size:.66rem;font-weight:700;padding:.1rem .45rem;border-radius:999px;
+    background:var(--chip);color:var(--brand-dk);flex-shrink:0}
+  .lix-empty{text-align:center;color:var(--ink-soft);font-size:.9rem;padding:2.5rem 1rem}
   .det-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem}
   .parc-summary{display:flex;gap:.6rem;margin-bottom:1.2rem;flex-wrap:wrap}
   .parc-box{flex:1;min-width:90px;border:1px solid var(--line);border-radius:11px;padding:.6rem .7rem;text-align:center;background:var(--surface-3)}
@@ -307,7 +325,7 @@
     display:none;align-items:center;justify-content:center;z-index:50;padding:1rem}
   .overlay.show{display:flex}
   .modal{background:var(--modal-bg);border-radius:18px;width:100%;max-width:420px;box-shadow:0 24px 60px -16px rgba(12,30,52,.5);
-    overflow:hidden;animation:pop .15s ease}
+    overflow:hidden;overflow-y:auto;max-height:90vh;animation:pop .15s ease}
   @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
   .modal-head{padding:1.2rem 1.4rem 1rem;border-bottom:1px solid var(--line)}
   .modal-head h3{font-size:1.05rem;font-weight:700}
@@ -514,6 +532,7 @@
     <div class="filters" id="filters">
       <button class="chip-btn active" data-filter="all">Todos</button>
       <button class="chip-btn" data-filter="open">Em aberto</button>
+      <button class="chip-btn" data-filter="hoje">Hoje</button>
       <button class="chip-btn" data-filter="partial">Parcial</button>
       <button class="chip-btn" data-filter="settled">Quitados</button>
     </div>
@@ -545,6 +564,7 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9c-2.5 0-4.8-1-6.4-2.6L3 16"/><path d="M3 12a9 9 0 0 1 9-9c2.5 0 4.8 1 6.4 2.6L21 8"/><path d="M21 3v5h-5"/><path d="M3 21v-5h5"/></svg>
         Sincronizar
       </button>
+      <button class="btn-ghost" id="btn-lixeira">🗑 Lixeira <span id="lixeira-badge" style="display:none;background:var(--debt);color:#fff;border-radius:999px;padding:.05rem .45rem;font-size:.72rem;margin-left:.2rem"></span></button>
       <button class="btn-ghost" id="restore">Restaurar CSV</button>
       <button class="btn-ghost" id="reset">Desfazer pagamentos</button>
       <button class="btn-export" id="export">
@@ -628,6 +648,7 @@
 <!-- modal de detalhamento -->
 <div class="overlay" id="det-overlay">
   <div class="modal modal-lg" role="dialog" aria-modal="true">
+    <div class="modal-float-close"><button id="d-float-close" title="Fechar" aria-label="Fechar">×</button></div>
     <div class="modal-head">
       <h3>Detalhamento da ficha</h3>
       <div class="client" id="d-client">—</div>
@@ -797,6 +818,28 @@
     <div class="modal-foot">
       <button class="btn-cancel" id="nv-cancel">Cancelar</button>
       <button class="btn-confirm" id="nv-save">Registrar venda</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal LIXEIRA -->
+<div class="overlay" id="lix-overlay">
+  <div class="modal modal-lg" role="dialog" aria-modal="true">
+    <div class="modal-float-close"><button id="lix-float-close" title="Fechar" aria-label="Fechar">×</button></div>
+    <div class="modal-head">
+      <h3>🗑 Lixeira</h3>
+      <div class="client">Clientes excluídos ficam guardados aqui. Selecione para restaurar ou apagar de vez.</div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.9rem" id="lix-actions">
+        <button class="btn-mini" id="lix-sel-todos" style="background:var(--paper);color:var(--brand);border:1px solid var(--line)">Selecionar todos</button>
+        <button class="btn-confirm" id="lix-restaurar" style="padding:.5rem 1rem">↺ Restaurar selecionados</button>
+        <button class="btn-ghost" id="lix-excluir" style="border-color:var(--debt);color:var(--debt)">✕ Excluir definitivamente</button>
+      </div>
+      <div id="lix-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="lix-close">Fechar</button>
     </div>
   </div>
 </div>
@@ -1132,35 +1175,37 @@
   }
 
   // ---------- persistência (nuvem + local) ----------
-  // payload sincronizado = { pagamentos:{...}, vendas:[...], nomes:{key:nome}, excluidos:[key] }
+  // payload sincronizado = { pagamentos:{...}, vendas:[...], nomes:{key:nome}, excluidos:[key], lixeira:[...] }
   // (retrocompatível: formato antigo {key:{...}} direto é tratado como pagamentos)
   let payments = {};      // { key: entry }
   let novasVendas = [];   // vendas criadas dentro do app
   let nomesEditados = {}; // { key: nomeNovo }
   let excluidos = [];     // [ key, ... ] fichas removidas
+  let lixeira = [];       // [ {key, origem, nome, pagamento, nomeEditado, venda, excluidoEm} ]
 
   function unwrap(payload) {
-    if (!payload || typeof payload !== "object") return { pagamentos: {}, vendas: [], nomes: {}, excluidos: [] };
+    if (!payload || typeof payload !== "object") return { pagamentos: {}, vendas: [], nomes: {}, excluidos: [], lixeira: [] };
     // formato novo
-    if (payload.pagamentos || payload.vendas || payload.nomes || payload.excluidos) {
+    if (payload.pagamentos || payload.vendas || payload.nomes || payload.excluidos || payload.lixeira) {
       return {
         pagamentos: (payload.pagamentos && typeof payload.pagamentos === "object") ? payload.pagamentos : {},
         vendas: Array.isArray(payload.vendas) ? payload.vendas : [],
         nomes: (payload.nomes && typeof payload.nomes === "object") ? payload.nomes : {},
-        excluidos: Array.isArray(payload.excluidos) ? payload.excluidos : []
+        excluidos: Array.isArray(payload.excluidos) ? payload.excluidos : [],
+        lixeira: Array.isArray(payload.lixeira) ? payload.lixeira : []
       };
     }
     // formato antigo: o objeto inteiro era o "payments"
-    return { pagamentos: payload, vendas: [], nomes: {}, excluidos: [] };
+    return { pagamentos: payload, vendas: [], nomes: {}, excluidos: [], lixeira: [] };
   }
-  function wrap() { return { pagamentos: payments, vendas: novasVendas, nomes: nomesEditados, excluidos: excluidos }; }
+  function wrap() { return { pagamentos: payments, vendas: novasVendas, nomes: nomesEditados, excluidos: excluidos, lixeira: lixeira }; }
 
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const u = unwrap(raw ? JSON.parse(raw) : null);
-      payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos;
-    } catch (e) { payments = {}; novasVendas = []; nomesEditados = {}; excluidos = []; }
+      payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos; lixeira = u.lixeira;
+    } catch (e) { payments = {}; novasVendas = []; nomesEditados = {}; excluidos = []; lixeira = []; }
   }
   function saveLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(wrap())); }
@@ -1200,7 +1245,7 @@
       if (error) throw error;
       if (data && data.payload && typeof data.payload === "object") {
         const u = unwrap(data.payload);
-        payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos;
+        payments = u.pagamentos; novasVendas = u.vendas; nomesEditados = u.nomes; excluidos = u.excluidos; lixeira = u.lixeira;
         saveLocal();
         rebuildBase();
       } else {
@@ -1252,12 +1297,10 @@
       return;
     }
     if (syncEl.classList.contains("on")) {
-      // tenta atualizar puxando da nuvem
       const ok = await pullFromCloud();
       if (ok) { render(); showToast("Dados atualizados da nuvem."); }
       return;
     }
-    // está em "Local": mostra o erro e como resolver
     let msg = "⚠ O app NÃO está sincronizando com a nuvem.\n\n";
     msg += "Motivo: " + (ultimoErroNuvem || "ainda não testado") + "\n\n";
     if ((ultimoErroNuvem || "").includes("tabela 'crediado' não existe")) {
@@ -1303,7 +1346,7 @@
     try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
   }
   themeBtn.addEventListener("click", toggleTheme);
-  applyTheme(loadTheme()); // aplica preferência salva já no carregamento
+  applyTheme(loadTheme());
 
   const baseRAW = RAW.map((r, i) => {
     const saldoOrig = Math.abs(parseMoney(r[3]));
@@ -1316,20 +1359,19 @@
       data: r[7] || "",
       dataSort: parseDate(r[7]),
       link: r[8] || "",
-      custo: 0,            // fichas antigas não têm custo registrado
-      venda: total,        // venda = total a receber
+      custo: 0,
+      venda: total,
       novaVenda: false
     };
   });
 
-  // converte uma venda criada no app em ficha (mesma forma de baseRAW)
   function vendaToFicha(v) {
     const venda = Number(v.venda) || 0;
     return {
       key: v.id,
       nome: v.nome || "—",
-      saldoOrig: venda,        // começa devendo o valor de venda inteiro
-      recebidoOrig: 0,         // nada recebido ainda (pagamentos entram via payments)
+      saldoOrig: venda,
+      recebidoOrig: 0,
       total: venda,
       data: v.data || "",
       dataSort: parseDate(v.data || ""),
@@ -1340,8 +1382,6 @@
     };
   }
 
-  // base = fichas originais + vendas novas (recriada quando há mudança)
-  // aplica nomes editados e remove fichas excluídas
   let base = baseRAW.slice();
   function rebuildBase() {
     const excluidosSet = new Set(excluidos);
@@ -1353,12 +1393,6 @@
   rebuildBase();
 
   // ---------- estrutura de dados por ficha ----------
-  // payments[key] = {
-  //   pagos:[{valor,data,obs}], dia:"10", parcelas:0,
-  //   primeira:"10/03/2026",  // data do 1º pagamento
-  //   rotina:"mensal",        // semanal | quinzenal | mensal | manual
-  //   vencimentos:["10/03/2026", ...] // datas geradas (ou manuais)
-  // }
   function normEntry(raw) {
     if (raw == null) return { pagos: [], dia: "", parcelas: 0, primeira: "", rotina: "mensal", vencimentos: [] };
     if (typeof raw === "number") {
@@ -1375,7 +1409,7 @@
   }
   function entryFor(key) {
     const e = normEntry(payments[key]);
-    payments[key] = e; // normaliza in-place
+    payments[key] = e;
     return e;
   }
   function totalPagoExtra(key) {
@@ -1394,7 +1428,6 @@
     return String(dt.getDate()).padStart(2, "0") + "/" +
            String(dt.getMonth() + 1).padStart(2, "0") + "/" + dt.getFullYear();
   }
-  // converte dd/mm/aaaa -> aaaa-mm-dd (para o input date) e vice-versa
   function brToISO(s) {
     const dt = parseDateBR(s);
     if (!dt) return "";
@@ -1422,7 +1455,7 @@
       if (rotina === "semanal") dt = new Date(first.getTime() + i * 7 * 86400000);
       else if (rotina === "quinzenal") dt = new Date(first.getTime() + i * 14 * 86400000);
       else if (rotina === "mensal") dt = addMonthsClamp(first, i, anchorDay);
-      else dt = (i === 0) ? first : null; // manual: só a 1ª é fixada
+      else dt = (i === 0) ? first : null;
       out.push(dt ? fmtDateBR(dt) : "");
     }
     return out;
@@ -1435,7 +1468,6 @@
     return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
-  // calcula estado atual aplicando pagamentos extras
   function compute(b) {
     const e = normEntry(payments[b.key]);
     const extra = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
@@ -1449,16 +1481,12 @@
     else status = "open";
     const parcelasTotal = e.parcelas || 0;
 
-    // ----- análise de parcelas e vencimentos (Opção 1) -----
-    // Cada parcela vale o VALOR CHEIO da dívida ÷ parcelas.
-    // O total já pago abate as parcelas na ordem: quita as primeiras inteiras
-    // e deixa a próxima parcial se sobrar um pedaço.
     const valorParcela = parcelasTotal > 0 ? (b.total / parcelasTotal) : 0;
     const venc = e.vencimentos || [];
     const hoje = hojeMeiaNoite();
 
-    const parcInfo = [];   // detalhe de cada parcela
-    let restantePago = recebido;   // total já recebido (orig + pagamentos), distribuído
+    const parcInfo = [];
+    let restantePago = recebido;
     let parcelasQuitadas = 0;
     let vencidoValor = 0, venceHojeValor = 0, proxData = "", proxValor = 0;
 
@@ -1466,7 +1494,6 @@
       for (let i = 0; i < parcelasTotal; i++) {
         const ds = venc[i] || "";
         const dt = parseDateBR(ds);
-        // quanto desta parcela já foi coberto pelo valor pago
         const pagoNesta = Math.min(valorParcela, Math.max(0, restantePago));
         restantePago -= pagoNesta;
         const faltaNesta = Math.max(0, valorParcela - pagoNesta);
@@ -1476,7 +1503,6 @@
         else pStatus = "aberta";
         if (pStatus === "paga") parcelasQuitadas++;
 
-        // vencido / vence hoje consideram só o que FALTA na parcela
         if (faltaNesta > 0.005 && dt) {
           if (dt < hoje) vencidoValor += faltaNesta;
           else if (mesmoDia(dt, hoje)) venceHojeValor += faltaNesta;
@@ -1486,10 +1512,8 @@
       }
     }
 
-    const parcelasPagas = parcelasQuitadas;            // parcelas totalmente quitadas
+    const parcelasPagas = parcelasQuitadas;
     const parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
-
-    // ----- lucro: venda - custo -----
     const lucro = (Number(b.venda) || b.total) - (Number(b.custo) || 0);
 
     return {
@@ -1579,6 +1603,7 @@
     document.getElementById("total-count").textContent = base.length;
     updateSortIndicators();
     renderKpis();
+    atualizaBadgeLixeira();
   }
 
   // ---------- KPIs ----------
@@ -1589,7 +1614,6 @@
     const totalGross = all.reduce((s, r) => s + r.total, 0);
     const openCount = all.filter(r => r.status !== "settled").length;
     const settledCount = all.length - openCount;
-    // vencidos e vence hoje (com base nas parcelas geradas)
     const vencidoTotal = all.reduce((s, r) => s + (r.vencidoValor || 0), 0);
     const vencidoFichas = all.filter(r => (r.vencidoValor || 0) > 0.005).length;
     const hojeTotal = all.reduce((s, r) => s + (r.venceHojeValor || 0), 0);
@@ -1643,7 +1667,7 @@
   document.getElementById("filters").addEventListener("click", e => {
     const btn = e.target.closest(".chip-btn");
     if (!btn) return;
-    document.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#filters .chip-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.filter = btn.dataset.filter;
     render();
@@ -1653,9 +1677,14 @@
   document.getElementById("kpis").addEventListener("click", e => {
     const card = e.target.closest(".kpi.clickable");
     if (!card) return;
-    const f = card.dataset.kpi; // "vencido" ou "hoje"
+    const f = card.dataset.kpi;
     state.filter = f;
-    document.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#filters .chip-btn").forEach(b => b.classList.remove("active"));
+    // marca o chip "Hoje" quando o filtro for hoje
+    if (f === "hoje") {
+      const chipHoje = document.querySelector('#filters .chip-btn[data-filter="hoje"]');
+      if (chipHoje) chipHoje.classList.add("active");
+    }
     render();
     showToast(f === "vencido" ? "Mostrando fichas com parcela atrasada." : "Mostrando parcelas que vencem hoje.");
     document.querySelector(".table-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1719,7 +1748,6 @@
       return;
     }
     const e = entryFor(activeKey);
-    // usa a data informada; se inválida ou vazia, usa hoje
     const dataPg = parseDateBR((mData.value || "").trim()) ? (mData.value || "").trim() : hojeBR();
     e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
     persist();
@@ -1741,6 +1769,8 @@
     if (ro && ro.classList.contains("show")) ro.classList.remove("show");
     const no = document.getElementById("nv-overlay");
     if (no && no.classList.contains("show")) no.classList.remove("show");
+    const lo = document.getElementById("lix-overlay");
+    if (lo && lo.classList.contains("show")) lo.classList.remove("show");
   });
 
   tbody.addEventListener("click", e => {
@@ -1770,7 +1800,7 @@
   const dHistCount = document.getElementById("d-hist-count");
   let detKey = null;
   let detRotina = "mensal";
-  let detVenc = [];   // datas em edição
+  let detVenc = [];
 
   function setRotinaUI(rot) {
     detRotina = rot;
@@ -1779,7 +1809,6 @@
 
   function renderParcSummary(r, totalOverride) {
     const total = totalOverride != null ? totalOverride : r.parcelasTotal;
-    // recalcula quantas parcelas estão quitadas com base no total atual
     let pagas = 0;
     if (total > 0) {
       const valorParcela = r.total / total;
@@ -1806,9 +1835,7 @@
     dVencBlock.style.display = "block";
     dVencCount.textContent = total;
     const hoje = hojeMeiaNoite();
-    // valor cheio de cada parcela = TOTAL da dívida ÷ parcelas
     const valorParcela = total > 0 ? (r.total / total) : 0;
-    // distribui o que já foi recebido sobre as parcelas, na ordem
     let restantePago = r.recebido;
     let html = "";
     for (let i = 0; i < total; i++) {
@@ -1823,7 +1850,6 @@
         tag = '<span class="vi-tag paga">paga</span>';
         valTxt = fmtBRL.format(valorParcela);
       } else if (pagoNesta > 0.005) {
-        // parcial: mostra quanto falta
         tag = (dt && dt < hoje) ? '<span class="vi-tag venc">vencida</span>'
             : (dt && mesmoDia(dt, hoje)) ? '<span class="vi-tag hoje">hoje</span>'
             : '<span class="vi-tag parcial">parcial</span>';
@@ -1874,7 +1900,6 @@
     dPaid.textContent = fmtBRL.format(r.recebido);
     dDebt.textContent = fmtBRL.format(r.saldo);
     dParcelas.value = e.parcelas > 0 ? String(e.parcelas) : "";
-    // data do 1º pagamento: usa a salva, ou sugere a data de criação da ficha
     dPrimeira.value = e.primeira || b.data || "";
     dDia.value = e.dia || "";
     setRotinaUI(e.rotina || "mensal");
@@ -1884,35 +1909,45 @@
     renderParcSummary(r);
     renderVencList(r);
     renderHist(r);
+    // rola o modal de volta para o topo ao abrir
+    const modalDet = detOverlay.querySelector(".modal");
+    if (modalDet) modalDet.scrollTop = 0;
     detOverlay.classList.add("show");
   }
   function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
 
-  // excluir cliente (qualquer ficha: original ou venda nova)
+  // excluir cliente → move para a LIXEIRA (guarda tudo p/ restaurar depois)
   document.getElementById("d-delete").addEventListener("click", () => {
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
     if (!b) return;
-    if (confirm('Excluir o cliente "' + b.nome + '"?\n\nIsso remove a ficha da lista e apaga os pagamentos e parcelas registrados dele. Esta ação não pode ser desfeita.')) {
-      // remove dados registrados
+    if (confirm('Enviar o cliente "' + b.nome + '" para a lixeira?\n\nEle sai da lista, mas fica guardado com os pagamentos e parcelas. Você pode restaurar depois pela Lixeira.')) {
+      const item = {
+        key: detKey,
+        origem: b.novaVenda ? "venda" : "csv",
+        nome: b.nome,
+        pagamento: payments[detKey] ? JSON.parse(JSON.stringify(payments[detKey])) : null,
+        nomeEditado: nomesEditados[detKey] || null,
+        venda: b.novaVenda ? (novasVendas.find(v => v.id === detKey) || null) : null,
+        excluidoEm: hojeBR()
+      };
+      lixeira = lixeira.filter(x => x.key !== detKey);
+      lixeira.push(item);
       delete payments[detKey];
       delete nomesEditados[detKey];
       if (b.novaVenda) {
-        // venda criada no app: some de vez
         novasVendas = novasVendas.filter(v => v.id !== detKey);
       } else {
-        // ficha original do CSV: marca como excluída pra não reaparecer
         if (!excluidos.includes(detKey)) excluidos.push(detKey);
       }
       rebuildBase();
       persist();
       closeDetails();
       render();
-      showToast("Cliente excluído.");
+      showToast("Cliente movido para a lixeira.");
     }
   });
 
-  // escolher rotina
   dRotina.addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn) return;
@@ -1923,7 +1958,6 @@
     dParcHint.classList.remove("warn");
   });
 
-  // atualiza resumo ao mudar nº de parcelas
   dParcelas.addEventListener("input", () => {
     const b = base.find(x => x.key === detKey);
     if (!b) return;
@@ -1932,7 +1966,6 @@
     renderParcSummary(r, total);
   });
 
-  // gerar vencimentos
   dGen.addEventListener("click", () => {
     const b = base.find(x => x.key === detKey);
     if (!b) return;
@@ -1943,7 +1976,6 @@
     if (!parseDateBR(primeira)) { dParcHint.textContent = "Informe a data do 1º pagamento no formato dd/mm/aaaa."; dParcHint.classList.add("warn"); return; }
 
     if (detRotina === "manual") {
-      // mantém datas existentes, ajusta o tamanho do array; 1ª = primeira
       const novo = [];
       for (let i = 0; i < total; i++) novo.push(i === 0 ? primeira : (detVenc[i] || ""));
       detVenc = novo;
@@ -1955,21 +1987,18 @@
       dParcHint.textContent = total + " parcelas geradas (" + rotLabel + ") a partir de " + primeira + ". Você ainda pode editar cada data abaixo.";
       dParcHint.classList.remove("warn");
     }
-    // atualiza dia do mês resumo com base na 1ª data
     const fp = parseDateBR(primeira);
     if (fp) dDia.value = String(fp.getDate());
     renderParcSummary(r, total);
     renderVencList(r);
   });
 
-  // editar uma data de vencimento manualmente
   dVencList.addEventListener("input", e => {
     const inp = e.target.closest("input[data-vi]");
     if (!inp) return;
     const i = parseInt(inp.dataset.vi);
     detVenc[i] = inp.value.trim();
   });
-  // re-renderiza tags ao sair do campo (pra recalcular vencida/hoje)
   dVencList.addEventListener("change", () => {
     const b = base.find(x => x.key === detKey);
     if (b) renderVencList(compute(b));
@@ -1979,7 +2008,6 @@
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
     const e = entryFor(detKey);
-    // nome editado
     const nomeNovo = (dNome.value || "").trim();
     if (nomeNovo && b && nomeNovo !== b.nome) {
       if (b.novaVenda) {
@@ -1989,7 +2017,6 @@
         nomesEditados[detKey] = nomeNovo;
       }
     } else if (!nomeNovo) {
-      // nome apagado: volta ao original (remove edição)
       delete nomesEditados[detKey];
     }
     const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
@@ -1997,7 +2024,6 @@
     e.primeira = (dPrimeira.value || "").trim().replace(/[^\d/]/g, "");
     e.rotina = detRotina;
     e.dia = (dDia.value || "").trim().replace(/[^\d/]/g, "");
-    // guarda vencimentos do tamanho do total
     e.vencimentos = [];
     for (let i = 0; i < total; i++) e.vencimentos.push((detVenc[i] || "").trim());
     rebuildBase();
@@ -2007,7 +2033,6 @@
     showToast("Ficha atualizada.");
   }
 
-  // remover um pagamento do histórico
   dHist.addEventListener("click", ev => {
     const del = ev.target.closest(".hi-del");
     if (!del || !detKey) return;
@@ -2031,6 +2056,7 @@
 
   document.getElementById("d-save").addEventListener("click", saveDetails);
   document.getElementById("d-close").addEventListener("click", closeDetails);
+  document.getElementById("d-float-close").addEventListener("click", closeDetails);
   detOverlay.addEventListener("click", e => { if (e.target === detOverlay) closeDetails(); });
 
   // ---------- COMPARTILHAR como imagem JPG ----------
@@ -2047,7 +2073,6 @@
   }
 
   function gerarImagemFicha(r) {
-    // monta a lista de parcelas com a mesma distribuição do compute
     const total = r.parcelasTotal || 0;
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restante = r.recebido;
@@ -2063,14 +2088,12 @@
       if (falta <= 0.005) st = "paga";
       else if (pago > 0.005) st = "parcial";
       else st = "aberta";
-      // vencida = ainda falta algo e a data já passou
       const vencida = falta > 0.005 && dtP && dtP < hojeImg;
       linhas.push({ n: i + 1, data: ds, valor: valorParcela, falta, status: st, vencida });
     }
 
-    // dimensões
     const W = 1080;
-    const scale = 2; // nitidez
+    const scale = 2;
     const padding = 60;
     const headerH = 250;
     const rowH = 70;
@@ -2083,15 +2106,12 @@
     const ctx = canvas.getContext("2d");
     ctx.scale(scale, scale);
 
-    // cores
     const C = { brand: "#0c3f6e", brand2: "#155e9c", ink: "#16202b", soft: "#6b7f93",
                 paid: "#1f8a4c", debt: "#c2334a", pend: "#c98510", blue: "#155e9c", gold: "#b8860b",
                 line: "#e3eaf1", bg: "#ffffff", chipbg: "#f2f7fe" };
 
-    // fundo
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
 
-    // header
     const grad = ctx.createLinearGradient(0, 0, W, headerH);
     grad.addColorStop(0, C.brand); grad.addColorStop(1, C.brand2);
     ctx.fillStyle = grad; ctx.fillRect(0, 0, W, headerH);
@@ -2103,7 +2123,6 @@
     const nomeLinhas = wrapText(ctx, r.nome, W - padding * 2);
     ctx.fillText(nomeLinhas[0], padding, 130);
 
-    // mini cards: pago / falta / total
     const cardY = 160, cardW = (W - padding * 2 - 40) / 3, cardH = 64;
     const cards = [
       { l: "JÁ PAGO", v: fmtBRL.format(r.recebido), c: "#bdf0d0" },
@@ -2120,7 +2139,6 @@
       ctx.fillText(cd.v, x + 16, cardY + 52);
     });
 
-    // título da lista
     let y = headerH + 50;
     ctx.fillStyle = C.ink; ctx.font = "700 30px Arial";
     ctx.fillText("Parcelas", padding, y);
@@ -2130,22 +2148,17 @@
     ctx.textAlign = "left";
     y += 30;
 
-    // linhas de parcelas
     linhas.forEach(p => {
       const tag = p.status === "paga" ? { t: "PAGA", c: C.paid }
                 : p.vencida ? { t: "VENCIDA", c: C.debt }
                 : p.status === "parcial" ? { t: "PARCIAL", c: C.pend }
                 : { t: "A PAGAR", c: C.blue };
-      // fundo alternado
       ctx.fillStyle = "#f8fafd"; roundRect(ctx, padding, y, W - padding * 2, rowH - 14, 10); ctx.fill();
-      // número
       ctx.fillStyle = C.chipbg; roundRect(ctx, padding + 14, y + 12, 34, 34, 8); ctx.fill();
       ctx.fillStyle = C.brand; ctx.font = "700 20px Arial"; ctx.textAlign = "center";
       ctx.fillText(String(p.n), padding + 14 + 17, y + 35); ctx.textAlign = "left";
-      // data
       ctx.fillStyle = C.ink; ctx.font = "600 24px Arial";
       ctx.fillText(p.data || "sem data", padding + 70, y + 35);
-      // valor / falta
       ctx.textAlign = "right";
       if (p.status === "parcial") {
         ctx.fillStyle = C.soft; ctx.font = "600 20px Arial";
@@ -2154,7 +2167,6 @@
         ctx.fillStyle = C.ink; ctx.font = "600 22px Arial";
         ctx.fillText(fmtBRL.format(p.valor), W - padding - 130, y + 35);
       }
-      // etiqueta status
       ctx.font = "700 17px Arial";
       const tw = ctx.measureText(tag.t).width + 24;
       ctx.fillStyle = tag.c; roundRect(ctx, W - padding - tw, y + 10, tw, 30, 15); ctx.fill();
@@ -2169,7 +2181,6 @@
       ctx.textAlign = "left";
     }
 
-    // rodapé
     const fy = H - footerH + 40;
     ctx.strokeStyle = C.line; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(padding, fy - 20); ctx.lineTo(W - padding, fy - 20); ctx.stroke();
@@ -2207,14 +2218,12 @@
     canvas.toBlob(async (blob) => {
       if (!blob) { showToast("Não consegui gerar a imagem."); return; }
       const file = new File([blob], nomeArq, { type: "image/jpeg" });
-      // tenta compartilhamento nativo (celular)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
           return;
-        } catch (e) { /* usuário cancelou ou falhou: cai pro download */ }
+        } catch (e) { /* cai pro download */ }
       }
-      // fallback: baixa o arquivo
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = nomeArq; a.click();
@@ -2239,7 +2248,6 @@
   }
   function closeRestore() { restOverlay.classList.remove("show"); }
 
-  // opção 1: voltar aos valores originais
   document.getElementById("rest-opt-original").addEventListener("click", () => {
     let pgs = 0;
     Object.keys(payments).forEach(k => { pgs += normEntry(payments[k]).pagos.length; });
@@ -2256,10 +2264,8 @@
         "Clique em Cancelar para APAGAR também as vendas novas.");
     }
     if (manterVendas) {
-      // zera só os pagamentos das fichas originais; preserva vendas novas e suas parcelas
       const ids = new Set(novasVendas.map(v => v.id));
       Object.keys(payments).forEach(k => { if (!ids.has(k)) delete payments[k]; });
-      // restaura nomes e clientes excluídos das fichas originais
       const idsVenda = new Set(novasVendas.map(v => v.id));
       Object.keys(nomesEditados).forEach(k => { if (!idsVenda.has(k)) delete nomesEditados[k]; });
       excluidos = [];
@@ -2276,14 +2282,11 @@
     showToast("Base restaurada.");
   });
 
-  // opção 2: carregar arquivo
   document.getElementById("rest-opt-file").addEventListener("click", () => restFile.click());
 
-  // parser de CSV simples (lida com ; ou , e campos entre aspas)
   function parseCSV(text) {
     const rows = [];
     let row = [], field = "", inQuotes = false;
-    // detecta separador pela 1ª linha
     const firstLine = text.split(/\r?\n/)[0] || "";
     const sep = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
     for (let i = 0; i < text.length; i++) {
@@ -2324,13 +2327,11 @@
     reader.readAsText(file, "UTF-8");
   });
 
-  // mostra prévia e botão de confirmar importação
   function showImportPreview(rows) {
     const head = rows[0].map(h => (h || "").toLowerCase());
-    // tenta achar a coluna do nome (2ª, ou cabeçalho "nome"/"cliente")
     let nameIdx = head.findIndex(h => /nome|cliente/.test(h));
     let hasHeader = nameIdx >= 0 || head.some(h => /nome|cliente|saldo|fiad|receb|total/.test(h));
-    if (nameIdx < 0) nameIdx = 1; // mesma posição do CSV original
+    if (nameIdx < 0) nameIdx = 1;
     const dataRows = hasHeader ? rows.slice(1) : rows;
     const sample = dataRows.slice(0, 5);
 
@@ -2354,8 +2355,6 @@
     document.getElementById("imp-cancel").addEventListener("click", () => { restPreview.innerHTML = ""; restFile.value = ""; });
     document.getElementById("imp-confirm").addEventListener("click", () => {
       restErr.textContent = "";
-      // por segurança, não sobrescrevo automaticamente a base embutida aqui:
-      // aviso o usuário que esse recurso depende do formato exato do arquivo.
       restPreview.innerHTML = '<div class="err" style="color:var(--pending)">Para importar com segurança (mantendo parcelas/vencimentos), me envie este arquivo no chat — ' +
         'eu confirmo o formato das colunas e gero a versão já com seus dados embutidos. ' +
         'Assim evitamos perder pagamentos por diferença de formato.</div>';
@@ -2439,14 +2438,12 @@
     }
 
     const id = gerarIdVenda();
-    // registra a venda (dados do produto/custo/venda)
     novasVendas.push({
       id, nome,
       custo, venda,
       data: primeira && parseDateBR(primeira) ? primeira : hojeBR(),
       criadoEm: hojeBR()
     });
-    // configura as parcelas dessa venda no payments
     const e = entryFor(id);
     e.parcelas = parcelas;
     e.primeira = parseDateBR(primeira) ? primeira : "";
@@ -2458,7 +2455,6 @@
     rebuildBase();
     persist();
     closeNewSale();
-    // mostra a venda recém-criada no topo
     searchEl.value = nome;
     state.q = nome;
     clearBtn.classList.add("show");
@@ -2471,10 +2467,115 @@
   document.getElementById("nv-cancel").addEventListener("click", closeNewSale);
   nvOverlay.addEventListener("click", e => { if (e.target === nvOverlay) closeNewSale(); });
 
+  // ====================== LIXEIRA ======================
+  const lixOverlay = document.getElementById("lix-overlay");
+  const lixList = document.getElementById("lix-list");
+  const lixBadge = document.getElementById("lixeira-badge");
+
+  function atualizaBadgeLixeira() {
+    if (!lixBadge) return;
+    if (lixeira.length > 0) {
+      lixBadge.textContent = lixeira.length;
+      lixBadge.style.display = "inline-block";
+    } else {
+      lixBadge.style.display = "none";
+    }
+  }
+
+  function renderLixeira() {
+    if (!lixeira.length) {
+      lixList.innerHTML = '<div class="lix-empty">A lixeira está vazia.</div>';
+      document.getElementById("lix-actions").style.display = "none";
+      return;
+    }
+    document.getElementById("lix-actions").style.display = "flex";
+    lixList.innerHTML = lixeira.map((item, idx) => {
+      const nome = item.nomeEditado || item.nome || "—";
+      const origem = item.origem === "venda" ? "Venda do app" : "Ficha do CSV";
+      const qtdPagos = item.pagamento && Array.isArray(item.pagamento.pagos) ? item.pagamento.pagos.length : 0;
+      const meta = "Excluído em " + (item.excluidoEm || "—") +
+        (qtdPagos ? " · " + qtdPagos + " pagamento(s) guardado(s)" : "");
+      return '<div class="lix-item">' +
+        '<input type="checkbox" data-lix="' + idx + '">' +
+        '<div class="lix-info">' +
+          '<div class="lix-nome">' + escapeHtml(nome) + '</div>' +
+          '<div class="lix-meta">' + escapeHtml(meta) + '</div>' +
+        '</div>' +
+        '<span class="lix-tag">' + origem + '</span>' +
+      '</div>';
+    }).join("");
+    document.getElementById("lix-sel-todos").textContent = "Selecionar todos";
+  }
+
+  function openLixeira() {
+    renderLixeira();
+    const modalLix = lixOverlay.querySelector(".modal");
+    if (modalLix) modalLix.scrollTop = 0;
+    lixOverlay.classList.add("show");
+  }
+  function closeLixeira() { lixOverlay.classList.remove("show"); }
+
+  function indicesSelecionados() {
+    return Array.from(lixList.querySelectorAll("input[data-lix]:checked"))
+      .map(c => parseInt(c.dataset.lix));
+  }
+
+  document.getElementById("lix-sel-todos").addEventListener("click", () => {
+    const checks = lixList.querySelectorAll("input[data-lix]");
+    if (!checks.length) return;
+    const todosMarcados = Array.from(checks).every(c => c.checked);
+    checks.forEach(c => c.checked = !todosMarcados);
+    document.getElementById("lix-sel-todos").textContent = todosMarcados ? "Selecionar todos" : "Desmarcar todos";
+  });
+
+  document.getElementById("lix-restaurar").addEventListener("click", () => {
+    const idxs = indicesSelecionados();
+    if (!idxs.length) { showToast("Selecione ao menos um cliente para restaurar."); return; }
+    idxs.sort((a, b) => b - a).forEach(idx => {
+      const item = lixeira[idx];
+      if (!item) return;
+      if (item.pagamento) payments[item.key] = item.pagamento;
+      if (item.nomeEditado) nomesEditados[item.key] = item.nomeEditado;
+      if (item.origem === "venda" && item.venda) {
+        if (!novasVendas.some(v => v.id === item.key)) novasVendas.push(item.venda);
+      } else {
+        excluidos = excluidos.filter(k => k !== item.key);
+      }
+      lixeira.splice(idx, 1);
+    });
+    rebuildBase();
+    persist();
+    renderLixeira();
+    atualizaBadgeLixeira();
+    render();
+    showToast(idxs.length + " cliente(s) restaurado(s).");
+  });
+
+  document.getElementById("lix-excluir").addEventListener("click", () => {
+    const idxs = indicesSelecionados();
+    if (!idxs.length) { showToast("Selecione ao menos um cliente para excluir."); return; }
+    if (!confirm("Excluir DEFINITIVAMENTE " + idxs.length + " cliente(s)?\n\nOs dados guardados (pagamentos e parcelas) serão apagados e NÃO poderão mais ser recuperados.")) return;
+    idxs.sort((a, b) => b - a).forEach(idx => {
+      const item = lixeira[idx];
+      if (!item) return;
+      delete payments[item.key];
+      delete nomesEditados[item.key];
+      lixeira.splice(idx, 1);
+    });
+    rebuildBase();
+    persist();
+    renderLixeira();
+    atualizaBadgeLixeira();
+    render();
+    showToast("Cliente(s) excluído(s) definitivamente.");
+  });
+
+  document.getElementById("btn-lixeira").addEventListener("click", openLixeira);
+  document.getElementById("lix-close").addEventListener("click", closeLixeira);
+  document.getElementById("lix-float-close").addEventListener("click", closeLixeira);
+  lixOverlay.addEventListener("click", e => { if (e.target === lixOverlay) closeLixeira(); });
+
   // ---------- CALENDÁRIO (inputs date nativos sobrepostos) ----------
-  // Cada campo de data tem um <input type="date"> invisível por cima do ícone 📅.
-  // Ao tocar, o calendário do próprio aparelho abre (funciona em iOS/Android/PC).
-  // Antes de abrir, sincronizamos o valor atual do campo de texto para o date.
   function sincronizarDateNative(nativo) {
     if (nativo.dataset.target) {
       const inp = document.getElementById(nativo.dataset.target);
@@ -2485,18 +2586,15 @@
     }
   }
 
-  // delegação: quando o usuário interage com qualquer .cal-native
   document.addEventListener("pointerdown", e => {
     const nativo = e.target.closest(".cal-native");
     if (nativo) sincronizarDateNative(nativo);
   }, true);
-  // fallback para navegadores sem pointer events
   document.addEventListener("focusin", e => {
     const nativo = e.target.closest(".cal-native");
     if (nativo) sincronizarDateNative(nativo);
   });
 
-  // quando muda qualquer input date nativo, escreve de volta no campo certo
   document.addEventListener("change", e => {
     const nativo = e.target.closest(".cal-native");
     if (!nativo || !nativo.value) return;
@@ -2520,7 +2618,6 @@
   // ====================== RELATÓRIOS ======================
   const repState = { per: "mes", ini: null, fim: null };
 
-  // troca de abas
   document.getElementById("tabs").addEventListener("click", e => {
     const btn = e.target.closest(".tab-btn");
     if (!btn) return;
@@ -2532,7 +2629,6 @@
     if (view === "relatorios") renderRelatorios();
   });
 
-  // seleção de período
   document.getElementById("rep-periods").addEventListener("click", e => {
     const btn = e.target.closest(".chip-btn");
     if (!btn) return;
@@ -2550,20 +2646,18 @@
     renderRelatorios();
   });
 
-  // calcula o intervalo [ini,fim] conforme o período escolhido
   function periodoAtual() {
     const hoje = new Date();
     const y = hoje.getFullYear(), m = hoje.getMonth();
     if (repState.per === "mes")
-      return { ini: new Date(y, m, 1), fim: new Date(y, m + 1, 0, 23, 59, 59), label: "Este mês" };
+      return { ini: new Date(y, m, 1), fim: new Date(y, m + 1, 0, 23, 59, 59), label: "Este mês", per: repState.per };
     if (repState.per === "mespassado")
-      return { ini: new Date(y, m - 1, 1), fim: new Date(y, m, 0, 23, 59, 59), label: "Mês passado" };
+      return { ini: new Date(y, m - 1, 1), fim: new Date(y, m, 0, 23, 59, 59), label: "Mês passado", per: repState.per };
     if (repState.per === "ano")
-      return { ini: new Date(y, 0, 1), fim: new Date(y, 11, 31, 23, 59, 59), label: "Este ano (" + y + ")" };
+      return { ini: new Date(y, 0, 1), fim: new Date(y, 11, 31, 23, 59, 59), label: "Este ano (" + y + ")", per: repState.per };
     if (repState.per === "tudo")
-      return { ini: null, fim: null, label: "Todo o período" };
-    // custom
-    return { ini: repState.ini, fim: repState.fim, label: "Período personalizado" };
+      return { ini: null, fim: null, label: "Todo o período", per: repState.per };
+    return { ini: repState.ini, fim: repState.fim, label: "Período personalizado", per: repState.per };
   }
 
   function dentroPeriodo(dt, ini, fim) {
@@ -2573,18 +2667,16 @@
     return true;
   }
 
-  // motor de agregação
   function gerarRelatorio(ini, fim) {
     const all = rows();
     let vendasFeitas = 0, vendasCount = 0, vendasNovasFeitas = 0, vendasNovasCount = 0;
     let custoPeriodo = 0, lucroPrevisto = 0;
     let recebidoPeriodo = 0, lucroRecebido = 0;
-    const topClientes = {};      // recebido no período por cliente
-    const recebidoPorMes = {};   // "aaaa-mm" -> total recebido
+    const topClientes = {};
+    const recebidoPorMes = {};
 
     all.forEach(f => {
       const dtCriacao = parseDateBR(f.data);
-      // ÂNGULO 1: vendas feitas no período (por data de criação)
       if (dentroPeriodo(dtCriacao, ini, fim)) {
         vendasFeitas += f.total;
         vendasCount++;
@@ -2595,7 +2687,6 @@
           lucroPrevisto += (f.venda - (f.custo || 0));
         }
       }
-      // ÂNGULO 2: dinheiro recebido no período (por data de cada pagamento)
       (f.pagos || []).forEach(p => {
         const dtPg = parseDateBR(p.data);
         if (dentroPeriodo(dtPg, ini, fim)) {
@@ -2604,7 +2695,6 @@
           topClientes[f.nome] = (topClientes[f.nome] || 0) + v;
           const chave = dtPg.getFullYear() + "-" + String(dtPg.getMonth() + 1).padStart(2, "0");
           recebidoPorMes[chave] = (recebidoPorMes[chave] || 0) + v;
-          // lucro proporcional ao recebido (só vendas novas com custo)
           if (f.novaVenda && f.venda > 0) {
             lucroRecebido += v * ((f.venda - (f.custo || 0)) / f.venda);
           }
@@ -2632,8 +2722,6 @@
     const margemMedia = r.vendasNovasFeitas > 0 ? Math.round((r.lucroPrevisto / r.vendasNovasFeitas) * 100) : 0;
 
     let html = "";
-
-    // SEÇÃO 1: vendas feitas no período
     html += '<div class="rep-section-title">🛒 Vendas feitas no período <span class="rep-section-sub">(pela data da venda)</span></div>';
     html += '<div class="rep-cards">';
     html += card("blue", "Total vendido", fmtBRL.format(r.vendasFeitas), r.vendasCount + " venda(s) no período");
@@ -2642,7 +2730,6 @@
     html += card("green", "Lucro previsto", fmtBRL.format(r.lucroPrevisto), "se receber tudo · margem " + margemMedia + "%");
     html += '</div>';
 
-    // SEÇÃO 2: dinheiro recebido no período
     html += '<div class="rep-section-title">💰 Dinheiro recebido no período <span class="rep-section-sub">(pela data dos pagamentos)</span></div>';
     html += '<div class="rep-cards">';
     html += card("green", "Total recebido", fmtBRL.format(r.recebidoPeriodo), "entrou no caixa no período");
@@ -2651,11 +2738,9 @@
     html += card("blue", "Ticket médio", fmtBRL.format(ticket), "valor médio por venda");
     html += '</div>';
 
-    // SEÇÃO 3: gráfico de recebido por mês (sempre dos últimos 6 meses, independente do filtro)
     html += '<div class="rep-section-title">📈 Recebimentos por mês <span class="rep-section-sub">(últimos 6 meses)</span></div>';
     html += renderGraficoMeses();
 
-    // SEÇÃO 4: top clientes do período
     html += '<div class="rep-section-title">🏆 Quem mais pagou no período</div>';
     html += renderTopClientes(r.topClientes);
 
@@ -2669,7 +2754,6 @@
       '<div class="rc-sub">' + sub + '</div></div>';
   }
 
-  // gráfico de barras: recebido nos últimos 6 meses
   function renderGraficoMeses() {
     const all = rows();
     const hoje = new Date();
@@ -2758,7 +2842,6 @@
     if (!supa) initSupabase();
     btnSync.classList.add("syncing");
     btnSync.disabled = true;
-    // 1) tenta puxar da nuvem
     const ok = await pullFromCloud();
     if (!ok) {
       btnSync.classList.remove("syncing");
@@ -2777,10 +2860,8 @@
       alert(msg);
       return;
     }
-    // 2) re-renderiza com o que veio da nuvem
     rebuildBase();
     render();
-    // 3) garante que o que estava local também suba (merge: nuvem já foi lida; agora reenvia o estado atual)
     await persist();
     btnSync.classList.remove("syncing");
     btnSync.disabled = false;
@@ -2822,7 +2903,6 @@
   const lockErr = document.getElementById("lock-err");
   const lockStatus = document.getElementById("lock-status");
 
-  // inicializa cliente Supabase, se configurado
   function initSupabase() {
     if (CLOUD_CONFIG.SUPABASE_URL && CLOUD_CONFIG.SUPABASE_KEY && window.supabase) {
       try {
@@ -2847,7 +2927,6 @@
     lockErr.textContent = "";
     lockEnter.textContent = "Entrando…";
     lockEnter.disabled = true;
-    // puxa dados da nuvem antes de mostrar
     await pullFromCloud();
     render();
     lock.classList.add("hide");
@@ -2861,23 +2940,20 @@
   let appLiberado = false;
   async function sincronizarSilencioso() {
     if (!appLiberado || !cloudEnabled()) return;
-    // não interrompe se algum modal estiver aberto (evita perder o que está digitando)
     const modalAberto = document.querySelector(".overlay.show") || (lock && !lock.classList.contains("hide"));
     if (modalAberto) return;
     const ok = await pullFromCloud();
     if (ok) render();
   }
-  // ao voltar o foco para o app (trocar de aba/app e voltar)
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") sincronizarSilencioso();
   });
   window.addEventListener("focus", sincronizarSilencioso);
-  // verificação periódica leve (a cada 25s)
   setInterval(sincronizarSilencioso, 25000);
 
   // arranca
   initSupabase();
-  render();              // mostra a tabela por baixo já com base local
+  render();
   setSync(cloudEnabled() ? "on" : "off");
   setTimeout(() => lockPass.focus(), 100);
 })();
