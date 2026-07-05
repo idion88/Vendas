@@ -406,6 +406,9 @@
   .lock-card button{width:100%;border:none;background:var(--brand);color:#fff;padding:.85rem;border-radius:11px;
     font-size:.95rem;font-weight:700;cursor:pointer;transition:.15s}
   .lock-card button:hover{background:var(--brand-dk)}
+  #lock-bio{background:var(--paper);color:var(--brand);border:1px solid var(--brand);margin-top:.7rem}
+  #lock-bio:hover{background:var(--chip)}
+  html[data-theme="dark"] #lock-bio{background:transparent}
   .lock-err{color:var(--debt);font-size:.82rem;margin-top:.6rem;min-height:1.1rem;font-weight:600}
   .lock-status{font-size:.75rem;color:var(--ink-soft);margin-top:1rem}
 
@@ -523,6 +526,7 @@
     <p>Digite a senha para acessar a gestão de fiados.</p>
     <input id="lock-pass" type="password" placeholder="Senha" autocomplete="current-password">
     <button id="lock-enter">Entrar</button>
+    <button id="lock-bio" style="display:none">👆 Entrar com digital</button>
     <div class="lock-err" id="lock-err"></div>
     <div class="lock-status" id="lock-status">Conectando à nuvem…</div>
   </div>
@@ -3102,8 +3106,19 @@
   const lock = document.getElementById("lock");
   const lockPass = document.getElementById("lock-pass");
   const lockEnter = document.getElementById("lock-enter");
+  const lockBio = document.getElementById("lock-bio");
   const lockErr = document.getElementById("lock-err");
   const lockStatus = document.getElementById("lock-status");
+
+  // detecta se está rodando dentro do app Median (onde existe a ponte de biometria)
+  function temMedian() {
+    return !!(window.median && window.median.auth) || !!(window.gonative && window.gonative.auth);
+  }
+  function medianAuth() {
+    if (window.median && window.median.auth) return window.median.auth;
+    if (window.gonative && window.gonative.auth) return window.gonative.auth;
+    return null;
+  }
 
   function initSupabase() {
     if (CLOUD_CONFIG.SUPABASE_URL && CLOUD_CONFIG.SUPABASE_KEY && window.supabase) {
@@ -3119,16 +3134,9 @@
     }
   }
 
-  async function enter() {
-    const val = lockPass.value;
-    if (val !== CLOUD_CONFIG.APP_PASSWORD) {
-      lockErr.textContent = "Senha incorreta.";
-      lockPass.select();
-      return;
-    }
+  // libera o acesso ao app (parte comum, tanto por senha quanto por digital)
+  async function liberarAcesso() {
     lockErr.textContent = "";
-    lockEnter.textContent = "Entrando…";
-    lockEnter.disabled = true;
     await pullFromCloud();
     aplicarMarca();
     render();
@@ -3136,7 +3144,78 @@
     appLiberado = true;
   }
 
+  async function enter() {
+    const val = lockPass.value;
+    if (val !== CLOUD_CONFIG.APP_PASSWORD) {
+      lockErr.textContent = "Senha incorreta.";
+      lockPass.select();
+      return;
+    }
+    lockEnter.textContent = "Entrando…";
+    lockEnter.disabled = true;
+
+    // se está no app e a biometria está disponível, guarda a senha protegida pela digital
+    // (assim, nas próximas vezes, entra só com o dedo)
+    const auth = medianAuth();
+    if (auth && auth.save) {
+      try {
+        await auth.save({ secret: CLOUD_CONFIG.APP_PASSWORD, minimumAndroidBiometric: "weak" });
+      } catch (e) { /* se falhar, segue com login normal */ }
+    }
+
+    await liberarAcesso();
+    lockEnter.textContent = "Entrar";
+    lockEnter.disabled = false;
+  }
+
+  // tenta entrar com a digital (recupera a senha guardada no cofre do aparelho)
+  async function entrarComDigital(automatico) {
+    const auth = medianAuth();
+    if (!auth || !auth.get) return;
+    if (!automatico) { lockBio.textContent = "Verificando…"; lockBio.disabled = true; }
+    try {
+      const res = await auth.get({ minimumAndroidBiometric: "weak", prompt: "Desbloqueie o app" });
+      const secret = res && (res.secret || res.value || res.password);
+      if (secret && secret === CLOUD_CONFIG.APP_PASSWORD) {
+        await liberarAcesso();
+      } else if (secret) {
+        // senha guardada não confere (senha mudou): pede a digitação
+        lockErr.textContent = "Confirme a senha para reativar a digital.";
+      }
+    } catch (e) {
+      // usuário cancelou ou biometria falhou: fica na tela de senha, sem erro barulhento
+      if (!automatico) lockErr.textContent = "Não foi possível ler a digital. Use a senha.";
+    }
+    lockBio.textContent = "👆 Entrar com digital";
+    lockBio.disabled = false;
+  }
+
+  // ao abrir, decide se mostra o botão de digital e se já tenta automaticamente
+  async function prepararBiometria() {
+    const auth = medianAuth();
+    if (!auth) return; // navegador comum: só senha
+    // verifica se o aparelho tem digital cadastrada e se já há segredo salvo
+    try {
+      const status = auth.status ? await auth.status() : null;
+      const temHardware = !status || status.hasTouchId || status.hasFaceId || status.hasBiometric || status.available;
+      const temSegredo = status ? (status.hasSecret || status.hasSecureData || status.hasCredentials) : true;
+      if (temHardware) {
+        lockBio.style.display = "block";
+        // se já tem senha guardada, tenta a digital automaticamente ao abrir
+        if (temSegredo) {
+          setTimeout(() => entrarComDigital(true), 400);
+        } else {
+          lockStatus.textContent = "Digite a senha uma vez para ativar a digital.";
+        }
+      }
+    } catch (e) {
+      // se o status falhar, ainda oferece o botão manual
+      lockBio.style.display = "block";
+    }
+  }
+
   lockEnter.addEventListener("click", enter);
+  lockBio.addEventListener("click", () => entrarComDigital(false));
   lockPass.addEventListener("keydown", e => { if (e.key === "Enter") enter(); });
 
   // ---------- sincronização automática entre dispositivos ----------
@@ -3159,7 +3238,8 @@
   aplicarMarca();
   render();
   setSync(cloudEnabled() ? "on" : "off");
-  setTimeout(() => lockPass.focus(), 100);
+  prepararBiometria();
+  setTimeout(() => { if (!temMedian()) lockPass.focus(); }, 100);
 })();
 </script>
 </body>
