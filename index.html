@@ -306,6 +306,7 @@
   .venc-item .vi-n{width:24px;height:24px;border-radius:50%;background:var(--chip);color:var(--brand-dk);
     display:grid;place-items:center;font-size:.72rem;font-weight:700;flex-shrink:0}
   .venc-item .vi-date{font-weight:600;font-variant-numeric:tabular-nums}
+  .venc-item .vi-date-paga input{color:var(--paid) !important; background:rgba(31,138,76,.08) !important; border-color:rgba(31,138,76,.2) !important;}
   .venc-item .vi-date input{border:1px solid var(--line);background:var(--input-bg);color:var(--ink);
     border-radius:7px;padding:.3rem .4rem;font-size:.82rem;width:104px;text-align:center;font-variant-numeric:tabular-nums}
   .venc-item .vi-val{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-soft);font-weight:600}
@@ -429,6 +430,33 @@
     border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);
     width:38px;height:38px;border-radius:11px;cursor:pointer;transition:.15s;font-size:1.05rem;line-height:1}
   .theme-btn:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* --- ocultar valores (modo privacidade) --- */
+  body.privacy-on .kpi .value,
+  body.privacy-on td.money,
+  body.privacy-on .pct{
+    color: transparent !important;
+    position: relative;
+    user-select: none;
+  }
+  body.privacy-on .kpi .value::after,
+  body.privacy-on td.money::after,
+  body.privacy-on .pct::after{
+    content: "R$ ••••";
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: inherit;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    font-weight: 700;
+  }
+  body.privacy-on td.money::after{ justify-content: flex-end; padding-right: inherit; }
+  body.privacy-on .pct::after{ content: "•• % pago"; }
+  body.privacy-on .bar{ filter: blur(5px); opacity: .5; }
+  /* também esconde a barra de progresso pra não vazar percentual visualmente */
+  #privacy-btn.on{ background: var(--brand); color: #fff; border-color: var(--brand); }
   .header-tools{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 
   /* ajustes de contraste no tema escuro para badges */
@@ -541,6 +569,7 @@
     <div class="header-tools">
       <div class="stamp"><b>CSV</b> Base 28/06/2026</div>
       <span class="sync off" id="sync"><span class="sdot2"></span><span id="sync-text">Local</span></span>
+      <button class="theme-btn" id="privacy-btn" title="Ocultar/mostrar valores" aria-label="Ocultar valores">👁️</button>
       <button class="theme-btn" id="theme-btn" title="Alternar tema claro/escuro" aria-label="Alternar tema">🌙</button>
     </div>
   </header>
@@ -1417,6 +1446,32 @@
   themeBtn.addEventListener("click", toggleTheme);
   applyTheme(loadTheme());
 
+  // ---------- modo privacidade (olhinho para ocultar valores) ----------
+  const PRIVACY_KEY = "crediado_privacy";
+  const privacyBtn = document.getElementById("privacy-btn");
+  function aplicarPrivacidade(on){
+    document.body.classList.toggle("privacy-on", !!on);
+    if (on) {
+      privacyBtn.textContent = "🙈";
+      privacyBtn.classList.add("on");
+      privacyBtn.title = "Mostrar valores";
+    } else {
+      privacyBtn.textContent = "👁️";
+      privacyBtn.classList.remove("on");
+      privacyBtn.title = "Ocultar valores";
+    }
+  }
+  function carregarPrivacidade(){
+    try { return localStorage.getItem(PRIVACY_KEY) === "1"; } catch(e){ return false; }
+  }
+  function alternarPrivacidade(){
+    const novo = !document.body.classList.contains("privacy-on");
+    aplicarPrivacidade(novo);
+    try { localStorage.setItem(PRIVACY_KEY, novo ? "1" : "0"); } catch(e){}
+  }
+  privacyBtn.addEventListener("click", alternarPrivacidade);
+  aplicarPrivacidade(carregarPrivacidade());
+
   // ---------- marca da empresa (nome + logo) ----------
   function aplicarMarca() {
     const nome = (empresa.nome || "").trim();
@@ -1953,6 +2008,31 @@
     const hoje = hojeMeiaNoite();
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restantePago = r.recebido;
+    // ---- cálculo da data em que cada parcela foi paga ----
+    // percorre os pagamentos em ordem e distribui pelas parcelas
+    const pagos = (r.pagos || []).slice();
+    let idxPag = 0, sobraPagAtual = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
+    const dataPagaPorParcela = new Array(total).fill("");
+    let cobertoAcum = 0;
+    for (let i = 0; i < total; i++) {
+      let faltaCobrirParcela = valorParcela;
+      // consome pagamentos até cobrir esta parcela (ou acabar)
+      while (faltaCobrirParcela > 0.005 && idxPag < pagos.length) {
+        if (sobraPagAtual <= 0.005) {
+          idxPag++;
+          sobraPagAtual = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0;
+          continue;
+        }
+        const usado = Math.min(sobraPagAtual, faltaCobrirParcela);
+        sobraPagAtual -= usado;
+        faltaCobrirParcela -= usado;
+        // quando ESTA parcela é fechada, guarda a data desse pagamento
+        if (faltaCobrirParcela <= 0.005) {
+          dataPagaPorParcela[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
+        }
+      }
+    }
+
     let html = "";
     for (let i = 0; i < total; i++) {
       const ds = detVenc[i] || "";
@@ -1976,10 +2056,17 @@
             : '';
         valTxt = fmtBRL.format(valorParcela);
       }
+
+      // se a parcela está PAGA e temos data do pagamento, mostra ela em vez do vencimento
+      const paga = (faltaNesta <= 0.005);
+      const dataMostrada = (paga && dataPagaPorParcela[i]) ? dataPagaPorParcela[i] : ds;
+      const inputExtraClass = paga && dataPagaPorParcela[i] ? " vi-date-paga" : "";
+      const titleExtra = paga && dataPagaPorParcela[i] ? ' title="Pago em ' + escapeHtml(dataPagaPorParcela[i]) + ' (venceu em ' + escapeHtml(ds || "—") + ')"' : '';
+
       html +=
         '<div class="venc-item">' +
           '<span class="vi-n">' + (i + 1) + '</span>' +
-          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(ds) + '"><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-target-vi="' + i + '" title="Escolher data"></span></span>' +
+          '<span class="vi-date' + inputExtraClass + '"' + titleExtra + '><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(dataMostrada) + '"' + (paga && dataPagaPorParcela[i] ? ' data-paga="1"' : '') + '><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-target-vi="' + i + '" title="Escolher data"></span></span>' +
           tag +
           '<span class="vi-val">' + valTxt + '</span>' +
         '</div>';
@@ -2112,6 +2199,9 @@
   dVencList.addEventListener("input", e => {
     const inp = e.target.closest("input[data-vi]");
     if (!inp) return;
+    // se a parcela está paga (input está mostrando data de pagamento),
+    // não deixa a edição sobrescrever o vencimento original
+    if (inp.dataset.paga === "1") return;
     const i = parseInt(inp.dataset.vi);
     detVenc[i] = inp.value.trim();
   });
@@ -2323,6 +2413,25 @@
     ctx.closePath();
   }
 
+  // detecta se está rodando dentro do app Capacitor
+  function noAppCapacitor(){
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+
+  // converte um blob em string base64 (necessário pra salvar arquivo no Android via Capacitor)
+  function blobParaBase64(blob){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const s = reader.result || "";
+        // remove o prefixo "data:image/jpeg;base64,"
+        resolve(String(s).split(",")[1] || "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
   async function compartilharFicha() {
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
@@ -2333,13 +2442,61 @@
 
     canvas.toBlob(async (blob) => {
       if (!blob) { showToast("Não consegui gerar a imagem."); return; }
+
+      // --- CENÁRIO 1: dentro do app Capacitor ---
+      if (noAppCapacitor()) {
+        try {
+          const Filesystem = window.Capacitor.Plugins.Filesystem;
+          const Share = window.Capacitor.Plugins.Share;
+          if (!Filesystem || !Share) throw new Error("Plugins Capacitor não encontrados");
+
+          // 1) grava a imagem na pasta Downloads (fica visível na galeria/gerenciador)
+          const base64 = await blobParaBase64(blob);
+          const escrito = await Filesystem.writeFile({
+            path: nomeArq,
+            data: base64,
+            directory: "EXTERNAL_STORAGE",
+            recursive: true
+          }).catch(async () => {
+            // fallback: se EXTERNAL_STORAGE não funcionar, salva no cache do app
+            return await Filesystem.writeFile({
+              path: nomeArq,
+              data: base64,
+              directory: "CACHE",
+              recursive: true
+            });
+          });
+
+          // 2) abre o menu nativo de compartilhar do Android (WhatsApp, Telegram, etc.)
+          try {
+            await Share.share({
+              title: "Extrato " + r.nome,
+              text: "Extrato de pagamentos — " + r.nome,
+              url: escrito.uri,
+              dialogTitle: "Compartilhar extrato"
+            });
+            showToast("Imagem salva e pronta pra compartilhar.");
+          } catch (eShare) {
+            // usuário fechou o menu ou o Share não conseguiu — a imagem já foi salva mesmo assim
+            showToast("Imagem salva na pasta Downloads.");
+          }
+          return;
+        } catch (e) {
+          console.error("Falha no compartilhamento nativo:", e);
+          // se o fluxo Capacitor falhar por qualquer motivo, cai no fluxo de navegador abaixo
+        }
+      }
+
+      // --- CENÁRIO 2: navegador (Web Share API do sistema, se disponível) ---
       const file = new File([blob], nomeArq, { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
           return;
-        } catch (e) { /* cai pro download */ }
+        } catch (e) { /* usuário cancelou ou não deu certo: cai pro download */ }
       }
+
+      // --- CENÁRIO 3: fallback final — download simples ---
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = nomeArq; a.click();
@@ -3110,15 +3267,17 @@
   const lockErr = document.getElementById("lock-err");
   const lockStatus = document.getElementById("lock-status");
 
-  // detecta se está rodando dentro do app Median (onde existe a ponte de biometria)
-  function temMedian() {
-    return !!(window.median && window.median.auth) || !!(window.gonative && window.gonative.auth);
+  // ====== BIOMETRIA via Capacitor (plugin nativo, gratuito) ======
+  // Detecta se está rodando dentro do app Capacitor
+  function noApp() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   }
-  function medianAuth() {
-    if (window.median && window.median.auth) return window.median.auth;
-    if (window.gonative && window.gonative.auth) return window.gonative.auth;
-    return null;
+  // pega o plugin de biometria (capacitor-native-biometric)
+  function bioPlugin() {
+    try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric || null; }
+    catch (e) { return null; }
   }
+  const BIO_SERVER = "crediado.app"; // identificador do "cofre" de credenciais no aparelho
 
   function initSupabase() {
     if (CLOUD_CONFIG.SUPABASE_URL && CLOUD_CONFIG.SUPABASE_KEY && window.supabase) {
@@ -3134,7 +3293,7 @@
     }
   }
 
-  // libera o acesso ao app (parte comum, tanto por senha quanto por digital)
+  // libera o acesso ao app (comum a senha e digital)
   async function liberarAcesso() {
     lockErr.textContent = "";
     await pullFromCloud();
@@ -3154,13 +3313,12 @@
     lockEnter.textContent = "Entrando…";
     lockEnter.disabled = true;
 
-    // se está no app e a biometria está disponível, guarda a senha protegida pela digital
-    // (assim, nas próximas vezes, entra só com o dedo)
-    const auth = medianAuth();
-    if (auth && auth.save) {
+    // no app: guarda a senha no cofre protegido pela digital (pra próxima vez entrar com o dedo)
+    const bio = bioPlugin();
+    if (bio && bio.setCredentials) {
       try {
-        await auth.save({ secret: CLOUD_CONFIG.APP_PASSWORD, minimumAndroidBiometric: "weak" });
-      } catch (e) { /* se falhar, segue com login normal */ }
+        await bio.setCredentials({ username: "crediado", password: CLOUD_CONFIG.APP_PASSWORD, server: BIO_SERVER });
+      } catch (e) { /* se falhar, segue normal */ }
     }
 
     await liberarAcesso();
@@ -3168,49 +3326,58 @@
     lockEnter.disabled = false;
   }
 
-  // tenta entrar com a digital (recupera a senha guardada no cofre do aparelho)
+  // entra com a digital: valida a biometria e recupera a senha guardada
   async function entrarComDigital(automatico) {
-    const auth = medianAuth();
-    if (!auth || !auth.get) return;
+    const bio = bioPlugin();
+    if (!bio) return;
     if (!automatico) { lockBio.textContent = "Verificando…"; lockBio.disabled = true; }
     try {
-      const res = await auth.get({ minimumAndroidBiometric: "weak", prompt: "Desbloqueie o app" });
-      const secret = res && (res.secret || res.value || res.password);
+      // 1) confirma a identidade pela digital
+      await bio.verifyIdentity({
+        reason: "Desbloqueie o app",
+        title: "Acesso ao Crediado",
+        subtitle: "",
+        description: ""
+      });
+      // 2) recupera a senha guardada
+      const cred = await bio.getCredentials({ server: BIO_SERVER });
+      const secret = cred && cred.password;
       if (secret && secret === CLOUD_CONFIG.APP_PASSWORD) {
         await liberarAcesso();
       } else if (secret) {
-        // senha guardada não confere (senha mudou): pede a digitação
-        lockErr.textContent = "Confirme a senha para reativar a digital.";
+        lockErr.textContent = "A senha mudou — digite-a uma vez para reativar a digital.";
+      } else {
+        lockErr.textContent = "Digite a senha uma vez para ativar a digital.";
       }
     } catch (e) {
-      // usuário cancelou ou biometria falhou: fica na tela de senha, sem erro barulhento
       if (!automatico) lockErr.textContent = "Não foi possível ler a digital. Use a senha.";
     }
     lockBio.textContent = "👆 Entrar com digital";
     lockBio.disabled = false;
   }
 
-  // ao abrir, decide se mostra o botão de digital e se já tenta automaticamente
+  // ao abrir: mostra o botão de digital e tenta automaticamente se já houver senha guardada
   async function prepararBiometria() {
-    const auth = medianAuth();
-    if (!auth) return; // navegador comum: só senha
-    // verifica se o aparelho tem digital cadastrada e se já há segredo salvo
+    const bio = bioPlugin();
+    if (!bio) return; // navegador comum: só senha
     try {
-      const status = auth.status ? await auth.status() : null;
-      const temHardware = !status || status.hasTouchId || status.hasFaceId || status.hasBiometric || status.available;
-      const temSegredo = status ? (status.hasSecret || status.hasSecureData || status.hasCredentials) : true;
-      if (temHardware) {
-        lockBio.style.display = "block";
-        // se já tem senha guardada, tenta a digital automaticamente ao abrir
-        if (temSegredo) {
-          setTimeout(() => entrarComDigital(true), 400);
-        } else {
-          lockStatus.textContent = "Digite a senha uma vez para ativar a digital.";
-        }
+      // verifica se o aparelho tem biometria disponível
+      const disp = await bio.isAvailable();
+      if (!disp || !disp.isAvailable) return;
+      lockBio.style.display = "block";
+      // vê se já há credencial guardada; se sim, tenta a digital automaticamente
+      let temSenha = false;
+      try {
+        const cred = await bio.getCredentials({ server: BIO_SERVER });
+        temSenha = !!(cred && cred.password);
+      } catch (e) { temSenha = false; }
+      if (temSenha) {
+        setTimeout(() => entrarComDigital(true), 400);
+      } else {
+        lockStatus.textContent = "Digite a senha uma vez para ativar a digital.";
       }
     } catch (e) {
-      // se o status falhar, ainda oferece o botão manual
-      lockBio.style.display = "block";
+      lockBio.style.display = "block"; // oferece o botão manual mesmo se a checagem falhar
     }
   }
 
@@ -3239,7 +3406,7 @@
   render();
   setSync(cloudEnabled() ? "on" : "off");
   prepararBiometria();
-  setTimeout(() => { if (!temMedian()) lockPass.focus(); }, 100);
+  setTimeout(() => { if (!noApp()) lockPass.focus(); }, 100);
 })();
 </script>
 </body>
