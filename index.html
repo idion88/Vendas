@@ -1953,8 +1953,8 @@
     e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
     ordenarPagamentos(e.pagos);
 
-    // congela a data das parcelas que ficaram quitadas AGORA (sem tocar nas já congeladas)
-    congelarDatasPagas(e, b, dataPg);
+    // Liga a data deste lançamento somente às parcelas que ele realmente quitou.
+    reconstruirDatasPagas(e, b);
 
     persist();
     closeModal();
@@ -1962,23 +1962,26 @@
     showToast("Pagamento de " + fmtBRL.format(val) + " registrado para " + b.nome);
   }
 
-  // grava a data de pagamento nas parcelas recém-quitadas, sem sobrescrever as que já têm data
-  function congelarDatasPagas(e, b, dataPg) {
+  // Reconstrói as datas das parcelas a partir dos lançamentos manuais.
+  // O que já veio como pago no CSV permanece com a própria data de vencimento.
+  function reconstruirDatasPagas(e, b) {
     const total = Number(e.parcelas) || 0;
     if (total <= 0) return;
-    if (!Array.isArray(e.datasPagas)) e.datasPagas = [];
     const valorParcela = b.total / total;
-    const totalRecebido = (Number(b.recebidoOrig) || 0) + e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-    // quantas parcelas estão quitadas com o total recebido até agora
-    let acumulado = 0;
-    for (let i = 0; i < total; i++) {
-      acumulado += valorParcela;
-      const parcelaQuitada = totalRecebido >= acumulado - 0.005;
-      if (parcelaQuitada && !e.datasPagas[i]) {
-        // parcela acabou de ser quitada e ainda não tinha data → congela com a data deste pagamento
-        e.datasPagas[i] = dataPg;
+    const datas = new Array(total).fill("");
+    let recebidoAntes = Number(b.recebidoOrig) || 0;
+    e.pagos.forEach(p => {
+      const recebidoDepois = recebidoAntes + (Number(p.valor) || 0);
+      for (let i = 0; i < total; i++) {
+        const limiteParcela = (i + 1) * valorParcela;
+        // A parcela recebe esta data apenas se foi quitada por este lançamento.
+        if (recebidoAntes < limiteParcela - 0.005 && recebidoDepois >= limiteParcela - 0.005) {
+          datas[i] = p.data || "";
+        }
       }
-    }
+      recebidoAntes = recebidoDepois;
+    });
+    e.datasPagas = datas;
   }
 
   document.getElementById("m-confirm").addEventListener("click", confirmPayment);
@@ -2155,6 +2158,10 @@
     if (!b) return;
     detKey = key;
     const e = entryFor(key);
+    // Corrige também registros salvos pela versão anterior, que podia copiar
+    // a data de um lançamento novo para pagamentos antigos.
+    reconstruirDatasPagas(e, b);
+    persist();
     const r = compute(b);
     dClient.textContent = r.nome;
     dNome.value = r.nome;
@@ -2367,8 +2374,9 @@
     if (!p) return;
     if (confirm("Remover o pagamento de " + fmtBRL.format(Number(p.valor) || 0) + "? O valor voltará para o saldo devedor.")) {
       e.pagos.splice(idx, 1);
-      persist();
       const b = base.find(x => x.key === detKey);
+      if (b) reconstruirDatasPagas(e, b);
+      persist();
       const r = compute(b);
       dPaid.textContent = fmtBRL.format(r.recebido);
       dDebt.textContent = fmtBRL.format(r.saldo);
@@ -2388,8 +2396,9 @@
     if (data && !parseDateBR(data)) { showToast("Informe a data no formato dd/mm/aaaa."); inp.value = p.data || ""; return; }
     p.data = data;
     ordenarPagamentos(e.pagos);
-    persist();
     const b = base.find(x => x.key === detKey);
+    if (b) reconstruirDatasPagas(e, b);
+    persist();
     if (b) renderHist(compute(b));
     showToast("Data do pagamento atualizada.");
   });
