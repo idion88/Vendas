@@ -384,6 +384,17 @@
   .btn-confirm{border:1px solid var(--paid);background:var(--paid);color:#fff;padding:.6rem 1.3rem;border-radius:10px;
     font-size:.85rem;font-weight:600;cursor:pointer}
   .btn-confirm:hover{filter:brightness(.95)}
+  .btn-edit{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:.6rem 1.2rem;border-radius:10px;
+    font-size:.85rem;font-weight:600;cursor:pointer}
+  .btn-edit:hover{filter:brightness(.95)}
+  /* modo somente-leitura: campos travados ficam com aparência desabilitada */
+  .modal-locked input:disabled,
+  .modal-locked .rotina-opts button:disabled,
+  .modal-locked .btn-gen:disabled{opacity:.6;cursor:not-allowed;background:var(--paper-alt)}
+  .modal-locked .venc-list input:disabled{opacity:.7;cursor:not-allowed}
+  .modal-locked .cal-btn,
+  .modal-locked .cal-native{pointer-events:none;opacity:.5}
+  .lock-hint{font-size:.72rem;color:var(--ink-soft);text-align:center;padding:.5rem;background:var(--paper-alt);border-radius:8px;margin-bottom:.6rem}
   .edited-flag{font-size:.66rem;color:var(--pending);font-weight:600;margin-left:.35rem}
 
   .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(120%);background:var(--brand-dk);
@@ -807,8 +818,9 @@
     </div>
     <div class="modal-foot">
       <button class="btn-danger" id="d-delete">Excluir cliente</button>
+      <button class="btn-edit" id="d-edit">✏️ Editar</button>
       <button class="btn-cancel" id="d-close">Fechar</button>
-      <button class="btn-confirm" id="d-save">Salvar alterações</button>
+      <button class="btn-confirm" id="d-save" style="display:none">Salvar alterações</button>
     </div>
   </div>
 </div>
@@ -2140,11 +2152,46 @@
     renderParcSummary(r);
     renderVencList(r);
     renderHist(r);
+    // abre sempre em modo somente-leitura (travado)
+    travarDetalhes();
     // rola o modal de volta para o topo ao abrir
     const modalDet = detOverlay.querySelector(".modal");
     if (modalDet) modalDet.scrollTop = 0;
     detOverlay.classList.add("show");
   }
+
+  // ---- modo edição: trava/destrava os campos do modal de detalhes ----
+  let detEditavel = false;
+  function camposDetalhe(){
+    return [dNome, dPrimeira, dParcelas, dDia];
+  }
+  function travarDetalhes(){
+    detEditavel = false;
+    const modalDet = detOverlay.querySelector(".modal");
+    if (modalDet) modalDet.classList.add("modal-locked");
+    camposDetalhe().forEach(c => { if(c) c.disabled = true; });
+    document.querySelectorAll("#d-rotina button").forEach(b => b.disabled = true);
+    const gen = document.getElementById("d-gen"); if(gen) gen.disabled = true;
+    document.querySelectorAll("#d-venc-list input").forEach(inp => inp.disabled = true);
+    // mostra botão Editar, esconde Salvar
+    document.getElementById("d-edit").style.display = "";
+    document.getElementById("d-save").style.display = "none";
+  }
+  function destravarDetalhes(){
+    detEditavel = true;
+    const modalDet = detOverlay.querySelector(".modal");
+    if (modalDet) modalDet.classList.remove("modal-locked");
+    camposDetalhe().forEach(c => { if(c) c.disabled = false; });
+    document.querySelectorAll("#d-rotina button").forEach(b => b.disabled = false);
+    const gen = document.getElementById("d-gen"); if(gen) gen.disabled = false;
+    // libera edição das datas de vencimento/pagamento
+    document.querySelectorAll("#d-venc-list input").forEach(inp => inp.disabled = false);
+    // esconde botão Editar, mostra Salvar
+    document.getElementById("d-edit").style.display = "none";
+    document.getElementById("d-save").style.display = "";
+    showToast("Modo edição ativado — altere e clique em Salvar alterações.");
+  }
+  document.getElementById("d-edit").addEventListener("click", destravarDetalhes);
   function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
 
   // excluir cliente → move para a LIXEIRA (guarda tudo p/ restaurar depois)
@@ -2227,10 +2274,18 @@
   dVencList.addEventListener("input", e => {
     const inp = e.target.closest("input[data-vi]");
     if (!inp) return;
-    // se a parcela está paga (input está mostrando data de pagamento),
-    // não deixa a edição sobrescrever o vencimento original
-    if (inp.dataset.paga === "1") return;
     const i = parseInt(inp.dataset.vi);
+    // se a parcela está paga: só permite editar em modo edição, e grava na data congelada
+    if (inp.dataset.paga === "1") {
+      if (!detEditavel) return; // fora do modo edição, não deixa mexer
+      // atualiza a data de pagamento congelada dessa parcela
+      const e2 = detKey ? entryFor(detKey) : null;
+      if (e2) {
+        if (!Array.isArray(e2.datasPagas)) e2.datasPagas = [];
+        e2.datasPagas[i] = inp.value.trim();
+      }
+      return;
+    }
     detVenc[i] = inp.value.trim();
   });
   dVencList.addEventListener("change", () => {
