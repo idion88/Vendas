@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crediado · Gestão de Fiados</title>
+<title>Gerente · Gestão de Fiados</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
@@ -542,7 +542,7 @@
 <div class="lock" id="lock">
   <div class="lock-card">
     <div class="logo-lg" id="lock-logo">$</div>
-    <h2 id="lock-title">Crediado</h2>
+    <h2 id="lock-title">Gerente</h2>
     <p>Digite a senha para acessar a gestão de fiados.</p>
     <input id="lock-pass" type="password" placeholder="Senha" autocomplete="current-password">
     <button id="lock-enter">Entrar</button>
@@ -555,7 +555,7 @@
 <div class="shell">
   <header>
     <div class="title-block">
-      <h1><span class="logo" id="brand-logo">$</span> <span id="brand-name">Crediado</span> · Gestão de Fiados</h1>
+      <h1><span class="logo" id="brand-logo">$</span> <span id="brand-name">Gerente</span> · Gestão de Fiados</h1>
       <p>Busque o cliente, veja quanto já pagou e quanto falta, e registre pagamentos.</p>
     </div>
     <div class="header-tools">
@@ -603,6 +603,7 @@
           <th>Status</th>
           <th class="sortable money" data-sort="saldo">Falta pagar <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="vencidoValor">Atrasado <span class="arrow">↕</span></th>
+          <th class="sortable money" data-sort="valorParcela">Valor parcela <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="recebido">Já pago <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="total">Total <span class="arrow">↕</span></th>
           <th>Progresso</th>
@@ -664,7 +665,7 @@
   <div id="view-config" style="display:none">
     <div class="cfg-wrap">
       <div class="cfg-title">Dados da empresa</div>
-      <p class="cfg-sub">O nome e a logo definidos aqui substituem "Crediado" no topo do app e na tela de acesso. Fica salvo na nuvem e vale em todos os aparelhos.</p>
+      <p class="cfg-sub">O nome e a logo definidos aqui substituem "Gerente" no topo do app e na tela de acesso. Fica salvo na nuvem e vale em todos os aparelhos.</p>
 
       <div class="cfg-logo-row">
         <div class="cfg-logo-preview" id="cfg-logo-preview"><span>$</span></div>
@@ -1472,7 +1473,7 @@
   function aplicarMarca() {
     const nome = (empresa.nome || "").trim();
     const logo = empresa.logo || "";
-    const nomeExib = nome || "Crediado";
+    const nomeExib = nome || "Gerente";
 
     // cabeçalho
     const brandName = document.getElementById("brand-name");
@@ -1752,6 +1753,7 @@
           '<td data-label="Status"><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
           '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
           '<td data-label="Atrasado" class="money ' + (r.vencidoValor > 0.005 ? "atrasado" : "muted cell-empty") + '">' + (r.vencidoValor > 0.005 ? fmtBRL.format(r.vencidoValor) : "—") + '</td>' +
+          '<td data-label="Valor parcela" class="money">' + (r.valorParcela > 0.005 ? fmtBRL.format(r.valorParcela) : "—") + '</td>' +
           '<td data-label="Já pago" class="money paid">' + fmtBRL.format(r.recebido) + '</td>' +
           '<td data-label="Total" class="money muted">' + fmtBRL.format(r.total) + '</td>' +
           '<td data-label="Progresso"><div class="bar"><span style="width:' + r.pct + '%"></span></div><span class="pct">' + r.pct + '% pago</span></td>' +
@@ -2280,6 +2282,21 @@
     let restante = r.recebido;
     const linhas = [];
     const hojeImg = hojeMeiaNoite();
+
+    // calcula a data em que cada parcela foi paga (distribui os pagamentos em ordem)
+    const pagos = (r.pagos || []).slice();
+    let idxPag = 0, sobraPag = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
+    const dataPagaParcela = new Array(total).fill("");
+    for (let i = 0; i < total; i++) {
+      let faltaCobrir = valorParcela;
+      while (faltaCobrir > 0.005 && idxPag < pagos.length) {
+        if (sobraPag <= 0.005) { idxPag++; sobraPag = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0; continue; }
+        const usa = Math.min(sobraPag, faltaCobrir);
+        sobraPag -= usa; faltaCobrir -= usa;
+        if (faltaCobrir <= 0.005) dataPagaParcela[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
+      }
+    }
+
     for (let i = 0; i < total; i++) {
       const ds = (r.vencimentos && r.vencimentos[i]) || "";
       const dtP = parseDateBR(ds);
@@ -2291,7 +2308,10 @@
       else if (pago > 0.005) st = "parcial";
       else st = "aberta";
       const vencida = falta > 0.005 && dtP && dtP < hojeImg;
-      linhas.push({ n: i + 1, data: ds, valor: valorParcela, falta, status: st, vencida });
+      // quando paga, a data mostrada é a do pagamento real (se houver); senão, o vencimento
+      const dataPagamento = dataPagaParcela[i] || "";
+      const dataMostrada = (st === "paga" && dataPagamento) ? dataPagamento : ds;
+      linhas.push({ n: i + 1, data: dataMostrada, vencimento: ds, dataPagamento, valor: valorParcela, falta, status: st, vencida });
     }
 
     const W = 1080;
@@ -2320,7 +2340,7 @@
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 30px Arial, sans-serif";
-    ctx.fillText("Crediado · Extrato do cliente", padding, 70);
+    ctx.fillText("Gerente · Extrato do cliente", padding, 70);
     ctx.font = "700 46px Arial, sans-serif";
     const nomeLinhas = wrapText(ctx, r.nome, W - padding * 2);
     ctx.fillText(nomeLinhas[0], padding, 130);
@@ -2360,7 +2380,8 @@
       ctx.fillStyle = C.brand; ctx.font = "700 20px Arial"; ctx.textAlign = "center";
       ctx.fillText(String(p.n), padding + 14 + 17, y + 35); ctx.textAlign = "left";
       ctx.fillStyle = C.ink; ctx.font = "600 24px Arial";
-      ctx.fillText(p.data || "sem data", padding + 70, y + 35);
+      const rotulo = (p.status === "paga" && p.dataPagamento) ? ("Pago em " + p.data) : (p.data || "sem data");
+      ctx.fillText(rotulo, padding + 70, y + 35);
       ctx.textAlign = "right";
       if (p.status === "parcial") {
         ctx.fillStyle = C.soft; ctx.font = "600 20px Arial";
@@ -2434,7 +2455,7 @@
     if (!b) return;
     const r = compute(b);
     const canvas = gerarImagemFicha(r);
-    const nomeArq = "crediado_" + (r.nome || "cliente").replace(/[^\w]+/g, "_").toLowerCase().slice(0, 30) + ".jpg";
+    const nomeArq = "gerente_" + (r.nome || "cliente").replace(/[^\w]+/g, "_").toLowerCase().slice(0, 30) + ".jpg";
 
     canvas.toBlob(async (blob) => {
       if (!blob) { showToast("Não consegui gerar a imagem."); return; }
@@ -3251,7 +3272,7 @@
     const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "crediado_atualizado.csv"; a.click();
+    a.href = url; a.download = "gerente_atualizado.csv"; a.click();
     URL.revokeObjectURL(url);
   });
 
@@ -3331,7 +3352,7 @@
       // 1) confirma a identidade pela digital
       await bio.verifyIdentity({
         reason: "Desbloqueie o app",
-        title: "Acesso ao Crediado",
+        title: "Acesso ao Gerente",
         subtitle: "",
         description: ""
       });
