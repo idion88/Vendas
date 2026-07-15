@@ -306,7 +306,7 @@
   .venc-item .vi-n{width:24px;height:24px;border-radius:50%;background:var(--chip);color:var(--brand-dk);
     display:grid;place-items:center;font-size:.72rem;font-weight:700;flex-shrink:0}
   .venc-item .vi-date{font-weight:600;font-variant-numeric:tabular-nums}
-  .venc-item .vi-date-paga input{color:var(--paid) !important; background:rgba(31,138,76,.08) !important; border-color:rgba(31,138,76,.2) !important;}
+  .venc-item .vi-date input{width:100%}
   .venc-item .vi-date input{border:1px solid var(--line);background:var(--input-bg);color:var(--ink);
     border-radius:7px;padding:.3rem .4rem;font-size:.82rem;width:104px;text-align:center;font-variant-numeric:tabular-nums}
   .venc-item .vi-val{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-soft);font-weight:600}
@@ -2067,7 +2067,7 @@
         }
       }
     }
-    // a data final de cada parcela: congelada tem prioridade; senão usa a calculada
+    // a data que aparece em cada parcela: se paga, a data do pagamento; senão, o vencimento
     const dataPagaPorParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
       dataPagaPorParcela[i] = datasCongeladas[i] || dataCalculada[i] || "";
@@ -2097,16 +2097,16 @@
         valTxt = fmtBRL.format(valorParcela);
       }
 
-      // se a parcela está PAGA e temos data do pagamento, mostra ela em vez do vencimento
       const paga = (faltaNesta <= 0.005);
+      // data mostrada: se paga e temos data de pagamento, mostra ela; senão o vencimento
       const dataMostrada = (paga && dataPagaPorParcela[i]) ? dataPagaPorParcela[i] : ds;
-      const inputExtraClass = paga && dataPagaPorParcela[i] ? " vi-date-paga" : "";
-      const titleExtra = paga && dataPagaPorParcela[i] ? ' title="Pago em ' + escapeHtml(dataPagaPorParcela[i]) + ' (venceu em ' + escapeHtml(ds || "—") + ')"' : '';
+      // marca se é parcela paga (pra o listener saber onde gravar), mas NÃO bloqueia edição
+      const attrPaga = paga && dataPagaPorParcela[i] ? ' data-paga="1"' : '';
 
       html +=
         '<div class="venc-item">' +
           '<span class="vi-n">' + (i + 1) + '</span>' +
-          '<span class="vi-date' + inputExtraClass + '"' + titleExtra + '><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(dataMostrada) + '"' + (paga && dataPagaPorParcela[i] ? ' data-paga="1"' : '') + '><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-target-vi="' + i + '" title="Escolher data"></span></span>' +
+          '<span class="vi-date"><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-vi="' + i + '" value="' + escapeHtml(dataMostrada) + '"' + attrPaga + '><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-target-vi="' + i + '" title="Escolher data"></span></span>' +
           tag +
           '<span class="vi-val">' + valTxt + '</span>' +
         '</div>';
@@ -2147,6 +2147,20 @@
     dDia.value = e.dia || "";
     setRotinaUI(e.rotina || "mensal");
     detVenc = (e.vencimentos || []).slice();
+    // se não há vencimentos preenchidos mas dá pra calcular, gera automaticamente
+    // (assim os campos vêm preenchidos, sem o placeholder "fantasma")
+    const totalParc = e.parcelas || 0;
+    const temVazias = detVenc.length < totalParc || detVenc.some(d => !d);
+    if (totalParc > 0 && temVazias) {
+      const base1 = e.primeira || b.data || "";
+      if (parseDateBR(base1)) {
+        const geradas = generateDueDates(base1, e.rotina || "mensal", totalParc);
+        // preenche só as vazias, preservando o que já existe
+        for (let i = 0; i < totalParc; i++) {
+          if (!detVenc[i] && geradas[i]) detVenc[i] = geradas[i];
+        }
+      }
+    }
     dParcHint.textContent = "";
     dParcHint.classList.remove("warn");
     renderParcSummary(r);
@@ -2289,6 +2303,8 @@
     detVenc[i] = inp.value.trim();
   });
   dVencList.addEventListener("change", () => {
+    // em modo edição, NÃO re-renderiza (senão perde a data que a pessoa acabou de digitar)
+    if (detEditavel) return;
     const b = base.find(x => x.key === detKey);
     if (b) renderVencList(compute(b));
   });
