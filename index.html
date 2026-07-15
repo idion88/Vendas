@@ -284,6 +284,10 @@
   .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
   .hist-item .hi-mid{flex:1;min-width:0}
   .hist-item .hi-date{font-size:.78rem;color:var(--ink-soft);font-weight:600}
+  .hist-item .hi-date-edit{display:flex;align-items:center;gap:.35rem;color:var(--ink-soft);font-size:.78rem;font-weight:600}
+  .hist-item .hi-date-edit input[type=text]{width:108px;border:1px solid var(--line);border-radius:7px;background:var(--input-bg);color:var(--ink);padding:.28rem .4rem;font:inherit;text-align:center}
+  .hist-item .hi-date-edit input[type=text]:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(21,94,156,.12)}
+  .hist-item .hi-date-edit .vi-cal-wrap{width:1.55rem;height:1.55rem}
   .hist-item .hi-obs{font-size:.82rem;margin-top:.15rem;word-break:break-word}
   .hist-item .hi-del{border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;padding:.1rem .3rem;border-radius:6px;line-height:1}
   .hist-item .hi-del:hover{color:var(--debt);background:var(--line-soft)}
@@ -1600,6 +1604,18 @@
     return normEntry(payments[key]).pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   }
 
+  // Mantém o histórico do mais antigo para o mais recente. Datas vazias ficam no fim.
+  function ordenarPagamentos(pagos) {
+    pagos.sort((a, b) => {
+      const da = parseDateBR(a.data);
+      const db = parseDateBR(b.data);
+      if (da && db) return da - db;
+      if (da) return -1;
+      if (db) return 1;
+      return 0;
+    });
+  }
+
   // ===== motor de datas de vencimento =====
   function parseDateBR(s) {
     if (!s) return null;
@@ -1937,6 +1953,7 @@
     const e = entryFor(activeKey);
     const dataPg = parseDateBR((mData.value || "").trim()) ? (mData.value || "").trim() : hojeBR();
     e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
+    ordenarPagamentos(e.pagos);
 
     // congela a data das parcelas que ficaram quitadas AGORA (sem tocar nas já congeladas)
     congelarDatasPagas(e, b, dataPg);
@@ -2127,7 +2144,10 @@
       '<div class="hist-item">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
-          '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
+          '<div class="hi-date-edit"><span>Pago em</span>' +
+            '<input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-pay-date="' + idx + '" value="' + escapeHtml(p.data || '') + '">' +
+            '<span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-payment-idx="' + idx + '" title="Escolher data"></span>' +
+          '</div>' +
           (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
         '</div>' +
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
@@ -2362,6 +2382,27 @@
       render();
       showToast("Pagamento removido.");
     }
+  });
+
+  dHist.addEventListener("change", ev => {
+    const inp = ev.target.closest("input[data-pay-date]");
+    if (!inp || !detKey) return;
+    const idx = parseInt(inp.dataset.payDate);
+    const e = entryFor(detKey);
+    const p = e.pagos[idx];
+    if (!p) return;
+    const data = (inp.value || "").trim();
+    if (data && !parseDateBR(data)) {
+      showToast("Informe a data no formato dd/mm/aaaa.");
+      inp.value = p.data || "";
+      return;
+    }
+    p.data = data;
+    ordenarPagamentos(e.pagos);
+    persist();
+    const b = base.find(x => x.key === detKey);
+    if (b) renderHist(compute(b));
+    showToast("Data do pagamento atualizada.");
   });
 
   document.getElementById("d-save").addEventListener("click", saveDetails);
@@ -2982,6 +3023,10 @@
     if (nativo.dataset.target) {
       const inp = document.getElementById(nativo.dataset.target);
       nativo.value = inp ? (brToISO(inp.value) || "") : "";
+    } else if (nativo.dataset.paymentIdx != null) {
+      const e = detKey ? entryFor(detKey) : null;
+      const p = e && e.pagos[parseInt(nativo.dataset.paymentIdx)];
+      nativo.value = p ? (brToISO(p.data) || "") : "";
     } else if (nativo.dataset.targetVi != null) {
       const idx = parseInt(nativo.dataset.targetVi);
       nativo.value = brToISO(detVenc[idx] || "") || "";
@@ -3007,6 +3052,12 @@
       if (inp) {
         inp.value = br;
         inp.dispatchEvent(new Event("input", { bubbles: true }));
+        inp.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } else if (nativo.dataset.paymentIdx != null) {
+      const inp = dHist.querySelector('input[data-pay-date="' + nativo.dataset.paymentIdx + '"]');
+      if (inp) {
+        inp.value = br;
         inp.dispatchEvent(new Event("change", { bubbles: true }));
       }
     } else if (nativo.dataset.targetVi != null) {
