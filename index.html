@@ -223,7 +223,10 @@
   .cal-btn:hover{background:var(--brand);filter:brightness(1.05)}
   /* o input date real fica invisível por cima do botão 📅, capturando o toque */
   .cal-native{position:absolute;right:.3rem;top:50%;transform:translateY(-50%);width:2rem;height:2rem;
-    opacity:0;cursor:pointer;z-index:2;border:none;padding:0;margin:0}
+    opacity:0;cursor:pointer;z-index:2;border:none;padding:0;margin:0;overflow:hidden;
+    -webkit-appearance:none;appearance:none;color:transparent;background:transparent}
+  .cal-native::-webkit-date-and-time-value{color:transparent}
+  .cal-native::-webkit-datetime-edit{color:transparent;opacity:0}
   .vi-date{position:relative;display:inline-flex;align-items:center;gap:.2rem}
   .vi-date .vi-cal-wrap{position:relative;width:1.6rem;height:1.6rem;display:inline-flex;align-items:center;justify-content:center}
   .vi-date .vi-cal-ic{font-size:.95rem;opacity:.7;pointer-events:none}
@@ -2152,7 +2155,7 @@
     const totalParc = e.parcelas || 0;
     const temVazias = detVenc.length < totalParc || detVenc.some(d => !d);
     if (totalParc > 0 && temVazias) {
-      const base1 = e.primeira || b.data || "";
+      const base1 = e.primeira || b.data || (detVenc[0] || "");
       if (parseDateBR(base1)) {
         const geradas = generateDueDates(base1, e.rotina || "mensal", totalParc);
         // preenche só as vazias, preservando o que já existe
@@ -2161,6 +2164,8 @@
         }
       }
     }
+    // se o campo "Data do 1º pagamento" ficou vazio, usa a 1ª parcela
+    if (!dPrimeira.value && detVenc[0]) dPrimeira.value = detVenc[0];
     dParcHint.textContent = "";
     dParcHint.classList.remove("warn");
     renderParcSummary(r);
@@ -3006,9 +3011,26 @@
       }
     } else if (nativo.dataset.targetVi != null) {
       const idx = parseInt(nativo.dataset.targetVi);
-      detVenc[idx] = br;
-      const b = base.find(x => x.key === detKey);
-      if (b) renderVencList(compute(b));
+      // descobre se a parcela correspondente está paga (input com data-paga="1")
+      const inpTexto = dVencList.querySelector('input[data-vi="' + idx + '"]');
+      const ehPaga = inpTexto && inpTexto.dataset.paga === "1";
+      if (ehPaga) {
+        // parcela paga: grava a data na datasPagas (data real do pagamento)
+        const e2 = detKey ? entryFor(detKey) : null;
+        if (e2) {
+          if (!Array.isArray(e2.datasPagas)) e2.datasPagas = [];
+          e2.datasPagas[idx] = br;
+        }
+        if (inpTexto) inpTexto.value = br; // reflete no campo sem re-renderizar
+      } else {
+        detVenc[idx] = br;
+        if (inpTexto) inpTexto.value = br;
+        // só re-renderiza fora do modo edição (pra não perder edições)
+        if (!detEditavel) {
+          const b = base.find(x => x.key === detKey);
+          if (b) renderVencList(compute(b));
+        }
+      }
     }
   });
 
