@@ -2065,33 +2065,12 @@
     const hoje = hojeMeiaNoite();
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restantePago = r.recebido;
-    // ---- data de pagamento de cada parcela ----
-    // PRIORIDADE: data congelada em datasPagas (nunca muda).
-    // Para parcelas pagas ANTES dessa atualização (sem data congelada), calcula por aproximação.
+    // A data só é exibida quando foi associada à parcela pelo próprio lançamento.
+    // Pagamentos antigos do CSV continuam mostrando a data de vencimento.
     const datasCongeladas = r.datasPagas || [];
-    const pagos = (r.pagos || []).slice();
-    let idxPag = 0, sobraPagAtual = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
-    const dataCalculada = new Array(total).fill("");
-    for (let i = 0; i < total; i++) {
-      let faltaCobrirParcela = valorParcela;
-      while (faltaCobrirParcela > 0.005 && idxPag < pagos.length) {
-        if (sobraPagAtual <= 0.005) {
-          idxPag++;
-          sobraPagAtual = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0;
-          continue;
-        }
-        const usado = Math.min(sobraPagAtual, faltaCobrirParcela);
-        sobraPagAtual -= usado;
-        faltaCobrirParcela -= usado;
-        if (faltaCobrirParcela <= 0.005) {
-          dataCalculada[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
-        }
-      }
-    }
-    // a data que aparece em cada parcela: se paga, a data do pagamento; senão, o vencimento
     const dataPagaPorParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      dataPagaPorParcela[i] = datasCongeladas[i] || dataCalculada[i] || "";
+      dataPagaPorParcela[i] = datasCongeladas[i] || "";
     }
 
     let html = "";
@@ -2428,24 +2407,11 @@
     const linhas = [];
     const hojeImg = hojeMeiaNoite();
 
-    // calcula a data em que cada parcela foi paga (distribui os pagamentos em ordem)
-    // PRIORIDADE: data congelada em datasPagas; fallback para o cálculo por aproximação
+    // Datas vinculadas diretamente aos pagamentos registrados no app.
     const datasCongeladasExt = r.datasPagas || [];
-    const pagos = (r.pagos || []).slice();
-    let idxPag = 0, sobraPag = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
     const dataPagaParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      let faltaCobrir = valorParcela;
-      while (faltaCobrir > 0.005 && idxPag < pagos.length) {
-        if (sobraPag <= 0.005) { idxPag++; sobraPag = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0; continue; }
-        const usa = Math.min(sobraPag, faltaCobrir);
-        sobraPag -= usa; faltaCobrir -= usa;
-        if (faltaCobrir <= 0.005) dataPagaParcela[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
-      }
-    }
-    // aplica prioridade da data congelada
-    for (let i = 0; i < total; i++) {
-      dataPagaParcela[i] = datasCongeladasExt[i] || dataPagaParcela[i] || "";
+      dataPagaParcela[i] = datasCongeladasExt[i] || "";
     }
 
     for (let i = 0; i < total; i++) {
