@@ -1604,11 +1604,9 @@
     return normEntry(payments[key]).pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   }
 
-  // Mantém o histórico do mais antigo para o mais recente. Datas vazias ficam no fim.
   function ordenarPagamentos(pagos) {
     pagos.sort((a, b) => {
-      const da = parseDateBR(a.data);
-      const db = parseDateBR(b.data);
+      const da = parseDateBR(a.data), db = parseDateBR(b.data);
       if (da && db) return da - db;
       if (da) return -1;
       if (db) return 1;
@@ -1970,7 +1968,7 @@
     if (total <= 0) return;
     if (!Array.isArray(e.datasPagas)) e.datasPagas = [];
     const valorParcela = b.total / total;
-    const totalRecebido = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+    const totalRecebido = (Number(b.recebidoOrig) || 0) + e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
     // quantas parcelas estão quitadas com o total recebido até agora
     let acumulado = 0;
     for (let i = 0; i < total; i++) {
@@ -2144,10 +2142,7 @@
       '<div class="hist-item">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
-          '<div class="hi-date-edit"><span>Pago em</span>' +
-            '<input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-pay-date="' + idx + '" value="' + escapeHtml(p.data || '') + '">' +
-            '<span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-payment-idx="' + idx + '" title="Escolher data"></span>' +
-          '</div>' +
+          '<div class="hi-date-edit"><span>Pago em</span><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-pay-date="' + idx + '" value="' + escapeHtml(p.data || '') + '"><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-payment-idx="' + idx + '" title="Escolher data"></span></div>' +
           (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
         '</div>' +
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
@@ -2387,16 +2382,10 @@
   dHist.addEventListener("change", ev => {
     const inp = ev.target.closest("input[data-pay-date]");
     if (!inp || !detKey) return;
-    const idx = parseInt(inp.dataset.payDate);
-    const e = entryFor(detKey);
-    const p = e.pagos[idx];
-    if (!p) return;
+    const e = entryFor(detKey), p = e.pagos[parseInt(inp.dataset.payDate)];
     const data = (inp.value || "").trim();
-    if (data && !parseDateBR(data)) {
-      showToast("Informe a data no formato dd/mm/aaaa.");
-      inp.value = p.data || "";
-      return;
-    }
+    if (!p) return;
+    if (data && !parseDateBR(data)) { showToast("Informe a data no formato dd/mm/aaaa."); inp.value = p.data || ""; return; }
     p.data = data;
     ordenarPagamentos(e.pagos);
     persist();
@@ -3056,10 +3045,7 @@
       }
     } else if (nativo.dataset.paymentIdx != null) {
       const inp = dHist.querySelector('input[data-pay-date="' + nativo.dataset.paymentIdx + '"]');
-      if (inp) {
-        inp.value = br;
-        inp.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      if (inp) { inp.value = br; inp.dispatchEvent(new Event("change", { bubbles: true })); }
     } else if (nativo.dataset.targetVi != null) {
       const idx = parseInt(nativo.dataset.targetVi);
       // descobre se a parcela correspondente está paga (input com data-paga="1")
@@ -3071,6 +3057,7 @@
         if (e2) {
           if (!Array.isArray(e2.datasPagas)) e2.datasPagas = [];
           e2.datasPagas[idx] = br;
+          persist();
         }
         if (inpTexto) inpTexto.value = br; // reflete no campo sem re-renderizar
       } else {
