@@ -2572,65 +2572,57 @@
     canvas.toBlob(async (blob) => {
       if (!blob) { showToast("Não consegui gerar a imagem."); return; }
 
-      // --- CENÁRIO 1: dentro do app Capacitor ---
-      if (noAppCapacitor()) {
+      const file = new File([blob], nomeArq, { type: "image/jpeg" });
+      const dadosShare = { files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome };
+
+      // --- Tentativa 1: navigator.share com arquivo (funciona em navegador moderno E WebView) ---
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          const Filesystem = window.Capacitor.Plugins.Filesystem;
-          const Share = window.Capacitor.Plugins.Share;
-          if (!Filesystem || !Share) throw new Error("Plugins Capacitor não encontrados");
-
-          // 1) grava a imagem na pasta Downloads (fica visível na galeria/gerenciador)
-          const base64 = await blobParaBase64(blob);
-          const escrito = await Filesystem.writeFile({
-            path: nomeArq,
-            data: base64,
-            directory: "EXTERNAL_STORAGE",
-            recursive: true
-          }).catch(async () => {
-            // fallback: se EXTERNAL_STORAGE não funcionar, salva no cache do app
-            return await Filesystem.writeFile({
-              path: nomeArq,
-              data: base64,
-              directory: "CACHE",
-              recursive: true
-            });
-          });
-
-          // 2) abre o menu nativo de compartilhar do Android (WhatsApp, Telegram, etc.)
-          try {
-            await Share.share({
-              title: "Extrato " + r.nome,
-              text: "Extrato de pagamentos — " + r.nome,
-              url: escrito.uri,
-              dialogTitle: "Compartilhar extrato"
-            });
-            showToast("Imagem salva e pronta pra compartilhar.");
-          } catch (eShare) {
-            // usuário fechou o menu ou o Share não conseguiu — a imagem já foi salva mesmo assim
-            showToast("Imagem salva na pasta Downloads.");
-          }
+          await navigator.share(dadosShare);
           return;
         } catch (e) {
-          console.error("Falha no compartilhamento nativo:", e);
-          // se o fluxo Capacitor falhar por qualquer motivo, cai no fluxo de navegador abaixo
+          // se o usuário cancelou (AbortError), não faz nada. Se falhou de verdade, tenta o próximo.
+          if (e && e.name === "AbortError") return;
         }
       }
 
-      // --- CENÁRIO 2: navegador (Web Share API do sistema, se disponível) ---
-      const file = new File([blob], nomeArq, { type: "image/jpeg" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // --- Tentativa 2: navigator.share só com URL (alguns WebViews aceitam) ---
+      if (navigator.share) {
         try {
-          await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
+          const url = URL.createObjectURL(blob);
+          await navigator.share({ title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome, url });
+          URL.revokeObjectURL(url);
           return;
-        } catch (e) { /* usuário cancelou ou não deu certo: cai pro download */ }
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+        }
       }
 
-      // --- CENÁRIO 3: fallback final — download simples ---
+      // --- Tentativa 3: abrir a imagem no visualizador (usuário compartilha de lá) ---
+      // O visualizador de imagens do Android tem botão de compartilhar próprio,
+      // que funciona sem depender de plugin nenhum.
+      try {
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const w = window.open("");
+        if (w) {
+          w.document.write(
+            '<html><head><title>' + (r.nome || "Extrato") + '</title>' +
+            '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+            '<style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>' +
+            '</head><body><img src="' + dataUrl + '" alt="Extrato"></body></html>'
+          );
+          w.document.close();
+          showToast("Segure a imagem para compartilhar.");
+          return;
+        }
+      } catch (e) { /* segue pro fallback final */ }
+
+      // --- Tentativa 4: download simples (fallback final) ---
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = nomeArq; a.click();
       URL.revokeObjectURL(url);
-      showToast("Imagem salva — pronta para compartilhar.");
+      showToast("Imagem salva. Abra os Downloads para compartilhar.");
     }, "image/jpeg", 0.92);
   }
 
@@ -3576,4 +3568,3 @@
 </script>
 </body>
 </html>
-
