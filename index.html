@@ -284,10 +284,6 @@
   .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
   .hist-item .hi-mid{flex:1;min-width:0}
   .hist-item .hi-date{font-size:.78rem;color:var(--ink-soft);font-weight:600}
-  .hist-item .hi-date-edit{display:flex;align-items:center;gap:.35rem;color:var(--ink-soft);font-size:.78rem;font-weight:600}
-  .hist-item .hi-date-edit input[type=text]{width:108px;border:1px solid var(--line);border-radius:7px;background:var(--input-bg);color:var(--ink);padding:.28rem .4rem;font:inherit;text-align:center}
-  .hist-item .hi-date-edit input[type=text]:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(21,94,156,.12)}
-  .hist-item .hi-date-edit .vi-cal-wrap{width:1.55rem;height:1.55rem}
   .hist-item .hi-obs{font-size:.82rem;margin-top:.15rem;word-break:break-word}
   .hist-item .hi-del{border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;padding:.1rem .3rem;border-radius:6px;line-height:1}
   .hist-item .hi-del:hover{color:var(--debt);background:var(--line-soft)}
@@ -1604,16 +1600,6 @@
     return normEntry(payments[key]).pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
   }
 
-  function ordenarPagamentos(pagos) {
-    pagos.sort((a, b) => {
-      const da = parseDateBR(a.data), db = parseDateBR(b.data);
-      if (da && db) return da - db;
-      if (da) return -1;
-      if (db) return 1;
-      return 0;
-    });
-  }
-
   // ===== motor de datas de vencimento =====
   function parseDateBR(s) {
     if (!s) return null;
@@ -1951,10 +1937,9 @@
     const e = entryFor(activeKey);
     const dataPg = parseDateBR((mData.value || "").trim()) ? (mData.value || "").trim() : hojeBR();
     e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
-    ordenarPagamentos(e.pagos);
 
-    // Liga a data deste lançamento somente às parcelas que ele realmente quitou.
-    reconstruirDatasPagas(e, b);
+    // congela a data das parcelas que ficaram quitadas AGORA (sem tocar nas já congeladas)
+    congelarDatasPagas(e, b, dataPg);
 
     persist();
     closeModal();
@@ -1962,26 +1947,23 @@
     showToast("Pagamento de " + fmtBRL.format(val) + " registrado para " + b.nome);
   }
 
-  // Reconstrói as datas das parcelas a partir dos lançamentos manuais.
-  // O que já veio como pago no CSV permanece com a própria data de vencimento.
-  function reconstruirDatasPagas(e, b) {
+  // grava a data de pagamento nas parcelas recém-quitadas, sem sobrescrever as que já têm data
+  function congelarDatasPagas(e, b, dataPg) {
     const total = Number(e.parcelas) || 0;
     if (total <= 0) return;
+    if (!Array.isArray(e.datasPagas)) e.datasPagas = [];
     const valorParcela = b.total / total;
-    const datas = new Array(total).fill("");
-    let recebidoAntes = Number(b.recebidoOrig) || 0;
-    e.pagos.forEach(p => {
-      const recebidoDepois = recebidoAntes + (Number(p.valor) || 0);
-      for (let i = 0; i < total; i++) {
-        const limiteParcela = (i + 1) * valorParcela;
-        // A parcela recebe esta data apenas se foi quitada por este lançamento.
-        if (recebidoAntes < limiteParcela - 0.005 && recebidoDepois >= limiteParcela - 0.005) {
-          datas[i] = p.data || "";
-        }
+    const totalRecebido = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+    // quantas parcelas estão quitadas com o total recebido até agora
+    let acumulado = 0;
+    for (let i = 0; i < total; i++) {
+      acumulado += valorParcela;
+      const parcelaQuitada = totalRecebido >= acumulado - 0.005;
+      if (parcelaQuitada && !e.datasPagas[i]) {
+        // parcela acabou de ser quitada e ainda não tinha data → congela com a data deste pagamento
+        e.datasPagas[i] = dataPg;
       }
-      recebidoAntes = recebidoDepois;
-    });
-    e.datasPagas = datas;
+    }
   }
 
   document.getElementById("m-confirm").addEventListener("click", confirmPayment);
@@ -2065,12 +2047,33 @@
     const hoje = hojeMeiaNoite();
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restantePago = r.recebido;
-    // A data só é exibida quando foi associada à parcela pelo próprio lançamento.
-    // Pagamentos antigos do CSV continuam mostrando a data de vencimento.
+    // ---- data de pagamento de cada parcela ----
+    // PRIORIDADE: data congelada em datasPagas (nunca muda).
+    // Para parcelas pagas ANTES dessa atualização (sem data congelada), calcula por aproximação.
     const datasCongeladas = r.datasPagas || [];
+    const pagos = (r.pagos || []).slice();
+    let idxPag = 0, sobraPagAtual = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
+    const dataCalculada = new Array(total).fill("");
+    for (let i = 0; i < total; i++) {
+      let faltaCobrirParcela = valorParcela;
+      while (faltaCobrirParcela > 0.005 && idxPag < pagos.length) {
+        if (sobraPagAtual <= 0.005) {
+          idxPag++;
+          sobraPagAtual = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0;
+          continue;
+        }
+        const usado = Math.min(sobraPagAtual, faltaCobrirParcela);
+        sobraPagAtual -= usado;
+        faltaCobrirParcela -= usado;
+        if (faltaCobrirParcela <= 0.005) {
+          dataCalculada[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
+        }
+      }
+    }
+    // a data que aparece em cada parcela: se paga, a data do pagamento; senão, o vencimento
     const dataPagaPorParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      dataPagaPorParcela[i] = datasCongeladas[i] || "";
+      dataPagaPorParcela[i] = datasCongeladas[i] || dataCalculada[i] || "";
     }
 
     let html = "";
@@ -2124,7 +2127,7 @@
       '<div class="hist-item">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
-          '<div class="hi-date-edit"><span>Pago em</span><input type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" data-pay-date="' + idx + '" value="' + escapeHtml(p.data || '') + '"><span class="vi-cal-wrap"><span class="vi-cal-ic">📅</span><input type="date" class="cal-native" data-payment-idx="' + idx + '" title="Escolher data"></span></div>' +
+          '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
           (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
         '</div>' +
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
@@ -2137,10 +2140,6 @@
     if (!b) return;
     detKey = key;
     const e = entryFor(key);
-    // Corrige também registros salvos pela versão anterior, que podia copiar
-    // a data de um lançamento novo para pagamentos antigos.
-    reconstruirDatasPagas(e, b);
-    persist();
     const r = compute(b);
     dClient.textContent = r.nome;
     dNome.value = r.nome;
@@ -2353,9 +2352,8 @@
     if (!p) return;
     if (confirm("Remover o pagamento de " + fmtBRL.format(Number(p.valor) || 0) + "? O valor voltará para o saldo devedor.")) {
       e.pagos.splice(idx, 1);
-      const b = base.find(x => x.key === detKey);
-      if (b) reconstruirDatasPagas(e, b);
       persist();
+      const b = base.find(x => x.key === detKey);
       const r = compute(b);
       dPaid.textContent = fmtBRL.format(r.recebido);
       dDebt.textContent = fmtBRL.format(r.saldo);
@@ -2364,22 +2362,6 @@
       render();
       showToast("Pagamento removido.");
     }
-  });
-
-  dHist.addEventListener("change", ev => {
-    const inp = ev.target.closest("input[data-pay-date]");
-    if (!inp || !detKey) return;
-    const e = entryFor(detKey), p = e.pagos[parseInt(inp.dataset.payDate)];
-    const data = (inp.value || "").trim();
-    if (!p) return;
-    if (data && !parseDateBR(data)) { showToast("Informe a data no formato dd/mm/aaaa."); inp.value = p.data || ""; return; }
-    p.data = data;
-    ordenarPagamentos(e.pagos);
-    const b = base.find(x => x.key === detKey);
-    if (b) reconstruirDatasPagas(e, b);
-    persist();
-    if (b) renderHist(compute(b));
-    showToast("Data do pagamento atualizada.");
   });
 
   document.getElementById("d-save").addEventListener("click", saveDetails);
@@ -2407,11 +2389,24 @@
     const linhas = [];
     const hojeImg = hojeMeiaNoite();
 
-    // Datas vinculadas diretamente aos pagamentos registrados no app.
+    // calcula a data em que cada parcela foi paga (distribui os pagamentos em ordem)
+    // PRIORIDADE: data congelada em datasPagas; fallback para o cálculo por aproximação
     const datasCongeladasExt = r.datasPagas || [];
+    const pagos = (r.pagos || []).slice();
+    let idxPag = 0, sobraPag = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
     const dataPagaParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      dataPagaParcela[i] = datasCongeladasExt[i] || "";
+      let faltaCobrir = valorParcela;
+      while (faltaCobrir > 0.005 && idxPag < pagos.length) {
+        if (sobraPag <= 0.005) { idxPag++; sobraPag = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0; continue; }
+        const usa = Math.min(sobraPag, faltaCobrir);
+        sobraPag -= usa; faltaCobrir -= usa;
+        if (faltaCobrir <= 0.005) dataPagaParcela[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
+      }
+    }
+    // aplica prioridade da data congelada
+    for (let i = 0; i < total; i++) {
+      dataPagaParcela[i] = datasCongeladasExt[i] || dataPagaParcela[i] || "";
     }
 
     for (let i = 0; i < total; i++) {
@@ -2987,10 +2982,6 @@
     if (nativo.dataset.target) {
       const inp = document.getElementById(nativo.dataset.target);
       nativo.value = inp ? (brToISO(inp.value) || "") : "";
-    } else if (nativo.dataset.paymentIdx != null) {
-      const e = detKey ? entryFor(detKey) : null;
-      const p = e && e.pagos[parseInt(nativo.dataset.paymentIdx)];
-      nativo.value = p ? (brToISO(p.data) || "") : "";
     } else if (nativo.dataset.targetVi != null) {
       const idx = parseInt(nativo.dataset.targetVi);
       nativo.value = brToISO(detVenc[idx] || "") || "";
@@ -3018,9 +3009,6 @@
         inp.dispatchEvent(new Event("input", { bubbles: true }));
         inp.dispatchEvent(new Event("change", { bubbles: true }));
       }
-    } else if (nativo.dataset.paymentIdx != null) {
-      const inp = dHist.querySelector('input[data-pay-date="' + nativo.dataset.paymentIdx + '"]');
-      if (inp) { inp.value = br; inp.dispatchEvent(new Event("change", { bubbles: true })); }
     } else if (nativo.dataset.targetVi != null) {
       const idx = parseInt(nativo.dataset.targetVi);
       // descobre se a parcela correspondente está paga (input com data-paga="1")
@@ -3032,7 +3020,6 @@
         if (e2) {
           if (!Array.isArray(e2.datasPagas)) e2.datasPagas = [];
           e2.datasPagas[idx] = br;
-          persist();
         }
         if (inpTexto) inpTexto.value = br; // reflete no campo sem re-renderizar
       } else {
@@ -3485,6 +3472,25 @@
     lockEnter.disabled = false;
   }
 
+  // ---- login automático vindo do APK ----
+  // O app Android manda a senha no hash da URL (#auto=BASE64). O hash não é
+  // enviado ao servidor, fica só no navegador. Aqui a gente lê, entra e limpa.
+  (function autoLoginDoApp() {
+    try {
+      const h = window.location.hash || "";
+      const m = h.match(/[#&]auto=([^&]+)/);
+      if (!m) return;
+      const senha = atob(decodeURIComponent(m[1]));
+      // limpa o hash imediatamente para a senha não ficar visível na barra
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      if (senha === CLOUD_CONFIG.APP_PASSWORD) {
+        lockPass.value = senha;
+        // pequena espera para o app terminar de carregar antes de liberar
+        setTimeout(() => { enter(); }, 300);
+      }
+    } catch (e) { /* se algo falhar, o login normal continua disponível */ }
+  })();
+
   // entra com a digital: valida a biometria e recupera a senha guardada
   async function entrarComDigital(automatico) {
     const bio = bioPlugin();
@@ -3570,3 +3576,4 @@
 </script>
 </body>
 </html>
+
