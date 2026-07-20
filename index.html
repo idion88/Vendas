@@ -2048,32 +2048,13 @@
     const valorParcela = total > 0 ? (r.total / total) : 0;
     let restantePago = r.recebido;
     // ---- data de pagamento de cada parcela ----
-    // PRIORIDADE: data congelada em datasPagas (nunca muda).
-    // Para parcelas pagas ANTES dessa atualização (sem data congelada), calcula por aproximação.
+    // Usa APENAS as datas congeladas (gravadas no momento do pagamento).
+    // Parcelas antigas sem data congelada mostram o vencimento; a data só é gravada
+    // pra pagamentos novos (nunca sobrescrita quando você registra outro pagamento).
     const datasCongeladas = r.datasPagas || [];
-    const pagos = (r.pagos || []).slice();
-    let idxPag = 0, sobraPagAtual = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
-    const dataCalculada = new Array(total).fill("");
-    for (let i = 0; i < total; i++) {
-      let faltaCobrirParcela = valorParcela;
-      while (faltaCobrirParcela > 0.005 && idxPag < pagos.length) {
-        if (sobraPagAtual <= 0.005) {
-          idxPag++;
-          sobraPagAtual = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0;
-          continue;
-        }
-        const usado = Math.min(sobraPagAtual, faltaCobrirParcela);
-        sobraPagAtual -= usado;
-        faltaCobrirParcela -= usado;
-        if (faltaCobrirParcela <= 0.005) {
-          dataCalculada[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
-        }
-      }
-    }
-    // a data que aparece em cada parcela: se paga, a data do pagamento; senão, o vencimento
     const dataPagaPorParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      dataPagaPorParcela[i] = datasCongeladas[i] || dataCalculada[i] || "";
+      dataPagaPorParcela[i] = datasCongeladas[i] || "";
     }
 
     let html = "";
@@ -2389,24 +2370,13 @@
     const linhas = [];
     const hojeImg = hojeMeiaNoite();
 
-    // calcula a data em que cada parcela foi paga (distribui os pagamentos em ordem)
-    // PRIORIDADE: data congelada em datasPagas; fallback para o cálculo por aproximação
+    // datas de pagamento por parcela: SOMENTE as congeladas (registradas no momento do pagamento).
+    // Não recalculamos por aproximação — isso evitava as datas mudarem quando um pagamento novo
+    // era registrado. Parcelas antigas sem data congelada mostram apenas o vencimento + selo PAGA.
     const datasCongeladasExt = r.datasPagas || [];
-    const pagos = (r.pagos || []).slice();
-    let idxPag = 0, sobraPag = pagos[0] ? (Number(pagos[0].valor) || 0) : 0;
     const dataPagaParcela = new Array(total).fill("");
     for (let i = 0; i < total; i++) {
-      let faltaCobrir = valorParcela;
-      while (faltaCobrir > 0.005 && idxPag < pagos.length) {
-        if (sobraPag <= 0.005) { idxPag++; sobraPag = pagos[idxPag] ? (Number(pagos[idxPag].valor) || 0) : 0; continue; }
-        const usa = Math.min(sobraPag, faltaCobrir);
-        sobraPag -= usa; faltaCobrir -= usa;
-        if (faltaCobrir <= 0.005) dataPagaParcela[i] = (pagos[idxPag] && pagos[idxPag].data) || "";
-      }
-    }
-    // aplica prioridade da data congelada
-    for (let i = 0; i < total; i++) {
-      dataPagaParcela[i] = datasCongeladasExt[i] || dataPagaParcela[i] || "";
+      dataPagaParcela[i] = datasCongeladasExt[i] || "";
     }
 
     for (let i = 0; i < total; i++) {
@@ -2598,23 +2568,14 @@
         }
       }
 
-      // --- Tentativa 3: abrir a imagem no visualizador (usuário compartilha de lá) ---
-      // O visualizador de imagens do Android tem botão de compartilhar próprio,
-      // que funciona sem depender de plugin nenhum.
+      // --- Tentativa 3: mostrar a imagem num modal (usuário segura o dedo pra compartilhar) ---
+      // Isso funciona em qualquer WebView: a imagem fica na própria página,
+      // o Android reconhece como imagem e mostra o menu completo de compartilhar
+      // (WhatsApp, Telegram, Gmail, etc.) ao segurar o dedo.
       try {
         const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        const w = window.open("");
-        if (w) {
-          w.document.write(
-            '<html><head><title>' + (r.nome || "Extrato") + '</title>' +
-            '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-            '<style>body{margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}img{max-width:100%;height:auto}</style>' +
-            '</head><body><img src="' + dataUrl + '" alt="Extrato"></body></html>'
-          );
-          w.document.close();
-          showToast("Segure a imagem para compartilhar.");
-          return;
-        }
+        mostrarImagemParaCompartilhar(dataUrl, r.nome || "Extrato");
+        return;
       } catch (e) { /* segue pro fallback final */ }
 
       // --- Tentativa 4: download simples (fallback final) ---
@@ -2624,6 +2585,41 @@
       URL.revokeObjectURL(url);
       showToast("Imagem salva. Abra os Downloads para compartilhar.");
     }, "image/jpeg", 0.92);
+  }
+
+  // Cria um modal com a imagem em tela cheia. O usuário segura o dedo na imagem
+  // e o Android mostra o menu real de compartilhar (WhatsApp, Telegram, Gmail, etc.).
+  function mostrarImagemParaCompartilhar(dataUrl, nomeCliente){
+    // remove modal anterior se houver
+    const existente = document.getElementById("share-img-modal");
+    if (existente) existente.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "share-img-modal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);" +
+      "display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;";
+
+    const dica = document.createElement("div");
+    dica.style.cssText = "color:#fff;font-size:14px;text-align:center;margin-bottom:12px;" +
+      "background:rgba(255,255,255,.1);padding:10px 16px;border-radius:10px;max-width:90%;line-height:1.5;";
+    dica.innerHTML = "👆 <b>Segure o dedo na imagem</b> para abrir o menu de compartilhar";
+
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "Extrato " + nomeCliente;
+    img.style.cssText = "max-width:100%;max-height:70vh;height:auto;border-radius:8px;" +
+      "box-shadow:0 8px 30px rgba(0,0,0,.5);-webkit-touch-callout:default;user-select:auto;";
+
+    const btnFechar = document.createElement("button");
+    btnFechar.textContent = "Fechar";
+    btnFechar.style.cssText = "margin-top:16px;padding:12px 32px;border:none;border-radius:10px;" +
+      "background:#fff;color:#111;font-size:15px;font-weight:600;cursor:pointer;";
+    btnFechar.onclick = () => modal.remove();
+
+    modal.appendChild(dica);
+    modal.appendChild(img);
+    modal.appendChild(btnFechar);
+    document.body.appendChild(modal);
   }
 
   document.getElementById("d-share").addEventListener("click", compartilharFicha);
