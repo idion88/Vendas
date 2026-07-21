@@ -1947,20 +1947,25 @@
     showToast("Pagamento de " + fmtBRL.format(val) + " registrado para " + b.nome);
   }
 
-  // grava a data de pagamento nas parcelas recém-quitadas, sem sobrescrever as que já têm data
+  // grava a data de pagamento SOMENTE nas parcelas quitadas por ESTE pagamento.
+  // Parcelas antigas (quitadas antes, sem data congelada) ficam sem data — assim a data
+  // nova nunca "pula" para a parcela 1 lá em cima; ela vai para a parcela quitada agora.
   function congelarDatasPagas(e, b, dataPg) {
     const total = Number(e.parcelas) || 0;
     if (total <= 0) return;
     if (!Array.isArray(e.datasPagas)) e.datasPagas = [];
     const valorParcela = b.total / total;
     const totalRecebido = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-    // quantas parcelas estão quitadas com o total recebido até agora
+    // o último item de e.pagos é o pagamento que acabou de entrar
+    const ultimo = e.pagos.length ? (Number(e.pagos[e.pagos.length - 1].valor) || 0) : 0;
+    const totalAntes = totalRecebido - ultimo;
     let acumulado = 0;
     for (let i = 0; i < total; i++) {
       acumulado += valorParcela;
-      const parcelaQuitada = totalRecebido >= acumulado - 0.005;
-      if (parcelaQuitada && !e.datasPagas[i]) {
-        // parcela acabou de ser quitada e ainda não tinha data → congela com a data deste pagamento
+      const quitadaAgora = totalRecebido >= acumulado - 0.005;   // quitada com o novo total
+      const quitadaAntes = totalAntes   >= acumulado - 0.005;   // já estava quitada antes
+      if (quitadaAgora && !quitadaAntes && !e.datasPagas[i]) {
+        // esta parcela foi quitada por ESTE pagamento → congela com a data dele
         e.datasPagas[i] = dataPg;
       }
     }
