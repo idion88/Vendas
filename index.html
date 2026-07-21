@@ -1955,7 +1955,11 @@
     if (total <= 0) return;
     if (!Array.isArray(e.datasPagas)) e.datasPagas = [];
     const valorParcela = b.total / total;
-    const totalRecebido = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+    // IMPORTANTE: clientes do CSV têm um "já pago" de base (recebidoOrig) que NÃO está em e.pagos.
+    // Sem somar isso, o cálculo achava que a parcela 1 tinha acabado de ser quitada e carimbava
+    // a data nela — bagunçando a ordem. O total real recebido é base do CSV + pagamentos do app.
+    const baseCSV = Number(b.recebidoOrig) || 0;
+    const totalRecebido = baseCSV + e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
     // o último item de e.pagos é o pagamento que acabou de entrar
     const ultimo = e.pagos.length ? (Number(e.pagos[e.pagos.length - 1].valor) || 0) : 0;
     const totalAntes = totalRecebido - ultimo;
