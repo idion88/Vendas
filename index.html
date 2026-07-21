@@ -2542,21 +2542,53 @@
     canvas.toBlob(async (blob) => {
       if (!blob) { showToast("Não consegui gerar a imagem."); return; }
 
-      const file = new File([blob], nomeArq, { type: "image/jpeg" });
-
-      // tenta o compartilhamento nativo (funciona no navegador e em muitos WebViews)
-      try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
-          return;
+      // --- Dentro do app Capacitor: usa plugins nativos ---
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+          var Filesystem = window.Capacitor.Plugins.Filesystem;
+          var Share = window.Capacitor.Plugins.Share;
+          if (Filesystem && Share) {
+            // converte blob pra base64
+            var reader = new FileReader();
+            reader.onloadend = async function() {
+              var base64 = (reader.result || "").split(",")[1] || "";
+              // salva no cache do app
+              var escrito = await Filesystem.writeFile({
+                path: nomeArq,
+                data: base64,
+                directory: "CACHE"
+              });
+              // abre o menu nativo de compartilhar
+              await Share.share({
+                title: "Extrato " + r.nome,
+                text: "Extrato de pagamentos - " + r.nome,
+                url: escrito.uri,
+                dialogTitle: "Compartilhar extrato"
+              });
+            };
+            reader.readAsDataURL(blob);
+            return;
+          }
+        } catch (e) {
+          console.warn("Compartilhamento nativo falhou:", e);
+          // cai pro método do navegador abaixo
         }
-      } catch (e) {
-        if (e && e.name === "AbortError") return;
       }
 
-      // fallback: download direto
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      // --- No navegador: usa Web Share API ---
+      var file = new File([blob], nomeArq, { type: "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "Extrato " + r.nome, text: "Extrato de pagamentos - " + r.nome });
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return;
+        }
+      }
+
+      // --- Fallback: download ---
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
       a.href = url; a.download = nomeArq; a.click();
       URL.revokeObjectURL(url);
       showToast("Imagem salva — pronta para compartilhar.");
