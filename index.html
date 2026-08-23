@@ -197,6 +197,8 @@
   .status.open{background:#e8f0fa;color:var(--brand)}
   .status.partial{background:#fdf4e6;color:var(--pending)}
   .status.settled{background:#e8f6ee;color:var(--paid)}
+  .status.merged{background:#f6efd9;color:var(--gold)}
+  html[data-theme="dark"] .status.merged{background:#3a3116;color:var(--gold)}
   .status .sdot{width:6px;height:6px;border-radius:50%;background:currentColor}
 
   .pay-btn{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:.4rem .75rem;border-radius:8px;
@@ -204,6 +206,36 @@
   .pay-btn:hover{background:var(--brand-dk);border-color:var(--brand-dk)}
   .pay-btn.settled{border-color:var(--line);background:var(--paper);color:var(--ink-soft);cursor:default}
   .pay-btn.settled:hover{background:var(--paper)}
+  .pay-btn.merged{border-color:var(--gold);background:var(--paper);color:var(--gold);cursor:default}
+  .pay-btn.merged:hover{background:var(--paper)}
+  .merged-flag{font-size:.66rem;color:var(--gold);font-weight:700;margin-left:.35rem}
+  .reneg-flag{font-size:.66rem;color:var(--gold);font-weight:700;margin-left:.35rem}
+
+  /* ===== União de contas ===== */
+  .uniao-intro{color:var(--ink-soft);font-size:.9rem;line-height:1.5;margin:.2rem 0 1rem}
+  .uniao-list{display:flex;flex-direction:column;gap:8px;margin:.4rem 0 .2rem}
+  .uniao-cli-head{font-size:.72rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin:.55rem 0 -.1rem;padding-left:2px}
+  .uniao-cli-head:first-child{margin-top:0}
+  .uniao-row{display:flex;align-items:flex-start;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:border-color .12s,background .12s}
+  .uniao-row:hover{border-color:var(--gold)}
+  .uniao-row.on{border-color:var(--gold);background:#faf6e9}
+  html[data-theme="dark"] .uniao-row.on{background:#2a2410}
+  .uniao-row input[type="checkbox"]{margin-top:3px;width:18px;height:18px;flex:none;cursor:pointer;accent-color:var(--gold)}
+  .uniao-row-body{flex:1;min-width:0}
+  .uniao-row-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .uniao-row-top strong{font-size:.95rem}
+  .uniao-row-val{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--brand)}
+  .uniao-row-meta{color:var(--ink-soft);font-size:.8rem;margin-top:2px}
+  .uniao-resumo{display:flex;gap:1.4rem;margin-top:1rem;padding-top:.9rem;border-top:1px solid var(--line)}
+  .uniao-resumo-lbl{color:var(--ink-soft);font-size:.74rem;text-transform:uppercase;letter-spacing:.04em}
+  .uniao-resumo-val{font-size:1.05rem;font-weight:600;margin-top:.15rem}
+  .uniao-resumo-val.strong{color:var(--brand);font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .uniao-btn{width:100%;justify-content:center;margin-top:.9rem;border:1px solid var(--brand);background:var(--brand);color:#fff;
+    padding:.7rem 1rem;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;gap:.4rem;align-items:center}
+  .uniao-btn:hover:not(:disabled){background:var(--brand-dk);border-color:var(--brand-dk)}
+  .uniao-btn:disabled{opacity:.5;cursor:not-allowed}
+  .uniao-banner{margin:.5rem 0 0;padding:.55rem .8rem;border-radius:9px;font-size:.82rem;font-weight:600;background:#f6efd9;color:var(--gold)}
+  html[data-theme="dark"] .uniao-banner{background:#3a3116}
   .open-link{color:var(--brand);text-decoration:none;font-weight:600;font-size:.78rem;border:1px solid var(--line);
     padding:.35rem .55rem;border-radius:8px;display:inline-flex;gap:.3rem;align-items:center;transition:.15s;white-space:nowrap}
   .open-link:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
@@ -393,6 +425,13 @@
   .btn-edit{border:1px solid var(--brand);background:var(--brand);color:#fff;padding:.6rem 1.2rem;border-radius:10px;
     font-size:.85rem;font-weight:600;cursor:pointer}
   .btn-edit:hover{filter:brightness(.95)}
+  .btn-reneg{border:1px solid var(--gold);background:transparent;color:var(--gold);padding:.6rem 1.1rem;border-radius:10px;
+    font-size:.85rem;font-weight:600;cursor:pointer}
+  .btn-reneg:hover{background:var(--gold);color:#fff}
+  .hist-reneg-head{font-size:.74rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin:.7rem 0 .3rem}
+  .hist-reneg-head:first-child{margin-top:0}
+  .hist-item.frozen{opacity:.85;border-style:dashed}
+  .hi-lock{color:var(--gold);font-size:.9rem;padding:.1rem .2rem}
   /* modo somente-leitura: campos travados ficam com aparência desabilitada */
   .modal-locked input:disabled,
   .modal-locked .rotina-opts button:disabled,
@@ -585,6 +624,7 @@
 
   <div class="tabs" id="tabs">
     <button class="tab-btn active" data-view="gestao">Gestão</button>
+    <button class="tab-btn" data-view="uniao">União</button>
     <button class="tab-btn" data-view="relatorios">Relatórios</button>
     <button class="tab-btn" data-view="config">Configurações</button>
   </div>
@@ -649,6 +689,24 @@
     </div>
   </footer>
   </div><!-- /view-gestao -->
+
+  <div id="view-uniao" style="display:none">
+    <div class="card" style="padding:1.1rem 1.2rem;margin-bottom:14px">
+      <h3 style="margin:0 0 .3rem">Unir contas</h3>
+      <p class="uniao-intro">
+        Junte várias dívidas em aberto numa conta só — do mesmo cliente ou de clientes
+        diferentes (útil pra cobrar pessoas ligadas juntas). As fichas antigas continuam
+        na lista com todo o histórico: o que já foi pago fica preservado e o saldo em aberto
+        para de ser cobrado. Nasce uma conta nova, limpa, com o total em aberto.
+      </p>
+      <div class="field-uniao">
+        <label style="display:block;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:.3rem">Buscar ficha (nome do cliente)</label>
+        <input type="text" id="uniaoBusca" placeholder="Digite pra filtrar a lista…" autocomplete="off"
+          style="width:100%;max-width:420px;padding:.6rem .8rem;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:.92rem">
+      </div>
+    </div>
+    <div id="uniaoConteudo"></div>
+  </div><!-- /view-uniao -->
 
   <div id="view-relatorios" style="display:none">
     <div class="rep-toolbar">
@@ -770,6 +828,12 @@
         <input id="d-nome" type="text" placeholder="Nome do cliente" style="padding-left:.9rem;font-size:1rem">
       </div>
 
+      <div class="field" style="margin-bottom:1rem">
+        <label for="d-valor">Valor da compra (total)</label>
+        <div class="input-money"><span>R$</span><input id="d-valor" type="text" inputmode="decimal" placeholder="0,00"></div>
+        <div class="parc-hint" id="d-valor-hint" style="margin-top:.3rem"></div>
+      </div>
+
       <div class="sec-title">📅 Editar compra (parcelas e vencimentos)</div>
       <div class="det-grid">
         <div class="field">
@@ -824,6 +888,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn-danger" id="d-delete">Excluir cliente</button>
+      <button class="btn-reneg" id="d-reneg">🤝 Renegociação</button>
       <button class="btn-edit" id="d-edit">✏️ Editar</button>
       <button class="btn-cancel" id="d-close">Fechar</button>
       <button class="btn-confirm" id="d-save" style="display:none">Salvar alterações</button>
@@ -1563,7 +1628,9 @@
       link: "",
       custo: Number(v.custo) || 0,
       venda: venda,
-      novaVenda: true
+      novaVenda: true,
+      unificada: !!v.unificada,            // conta criada pela União
+      mergedFrom: Array.isArray(v.mergedFrom) ? v.mergedFrom : null
     };
   }
 
@@ -1573,7 +1640,29 @@
     const todas = baseRAW.concat(novasVendas.map(vendaToFicha));
     base = todas
       .filter(f => !excluidosSet.has(f.key))
-      .map(f => nomesEditados[f.key] ? { ...f, nome: nomesEditados[f.key] } : f);
+      .map(f => {
+        let out = nomesEditados[f.key] ? { ...f, nome: nomesEditados[f.key] } : f;
+        const ov = payments[f.key];
+        // renegociação: o acordo antigo é congelado; o novo começa do zero.
+        // Zera o "recebido de base" (o já pago fica guardado em renegPagoAntes,
+        // só pra exibição), e o novo saldo passa a ser o valorTotal renegociado.
+        if (ov && ov.renegociado) {
+          if (out === f) out = { ...f };
+          out.recebidoOrig = 0;
+          const novoTotal = ov.valorTotal != null ? (Number(ov.valorTotal) || 0) : (Number(f.total) || 0);
+          out.total = novoTotal;
+          out.venda = novoTotal;
+          out.saldoOrig = Math.max(0, novoTotal);
+        } else if (ov && ov.valorTotal != null && ov.valorTotal >= 0) {
+          // override do valor total da compra, se o usuário editou (sem renegociar)
+          const novoTotal = Number(ov.valorTotal) || 0;
+          if (out === f) out = { ...f };
+          out.total = novoTotal;
+          out.venda = novoTotal;
+          out.saldoOrig = Math.max(0, novoTotal - (Number(f.recebidoOrig) || 0));
+        }
+        return out;
+      });
   }
   rebuildBase();
 
@@ -1591,7 +1680,22 @@
       rotina: raw.rotina || "mensal",
       vencimentos: Array.isArray(raw.vencimentos) ? raw.vencimentos : [],
       // datas em que cada parcela foi CONFIRMADA como paga (congeladas, nunca sobrescritas)
-      datasPagas: Array.isArray(raw.datasPagas) ? raw.datasPagas : []
+      datasPagas: Array.isArray(raw.datasPagas) ? raw.datasPagas : [],
+      // override do valor total da compra (editável na ficha; null = usa o original)
+      valorTotal: raw.valorTotal != null ? Number(raw.valorTotal) : null,
+      // ===== renegociação =====
+      // acordo renegociado: histórico antigo congelado + novo saldo do zero
+      renegociado: !!raw.renegociado,
+      renegEm: raw.renegEm || "",                       // data da renegociação
+      renegPagoAntes: raw.renegPagoAntes != null ? Number(raw.renegPagoAntes) : 0, // total já pago congelado
+      pagosHist: Array.isArray(raw.pagosHist) ? raw.pagosHist : [], // pagamentos congelados (histórico)
+      // ===== união de contas =====
+      // id da conta unificada em que esta ficha foi fundida (congela o saldo)
+      mergedInto: raw.mergedInto || null,
+      // saldo que foi transferido pra conta nova (rastreável, pra reverter)
+      mergedSaldo: raw.mergedSaldo != null ? Number(raw.mergedSaldo) : null,
+      // data da união (dd/mm/aaaa)
+      mergedEm: raw.mergedEm || ""
     };
   }
   function entryFor(key) {
@@ -1699,12 +1803,31 @@
       }
     }
 
-    const parcelasPagas = parcelasQuitadas;
-    const parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
+    let parcelasPagas = parcelasQuitadas;
+    let parcelasFaltam = parcelasTotal > 0 ? Math.max(0, parcelasTotal - parcelasPagas) : 0;
     const lucro = (Number(b.venda) || b.total) - (Number(b.custo) || 0);
+
+    // ===== ficha unificada (congelada) =====
+    // O saldo em aberto foi transferido pra conta unificada: para de ser
+    // cobrado e de correr juros/atraso. O que já foi recebido continua real.
+    const merged = !!e.mergedInto;
+    if (merged) {
+      saldo = 0;
+      status = "merged";
+      vencidoValor = 0; venceHojeValor = 0; proxData = ""; proxValor = 0;
+      // todas as parcelas ainda em aberto viram "transferida"
+      parcInfo.forEach(p => {
+        if (p.status !== "paga") { p.status = "transferida"; p.transferida = true; }
+      });
+      parcelasPagas = parcelasTotal;
+      parcelasFaltam = 0;
+    }
 
     return {
       ...b, recebido, saldo, pct, status,
+      merged, mergedInto: e.mergedInto || null, mergedSaldo: e.mergedSaldo, mergedEm: e.mergedEm || "",
+      renegociado: !!e.renegociado, renegEm: e.renegEm || "", renegPagoAntes: Number(e.renegPagoAntes) || 0,
+      pagosHist: Array.isArray(e.pagosHist) ? e.pagosHist : [],
       edited: extra > 0.005,
       dia: e.dia, parcelasTotal, parcelasPagas, parcelasFaltam,
       pagos: e.pagos,
@@ -1747,7 +1870,7 @@
     return out;
   }
 
-  const statusLabel = { open: "Em aberto", partial: "Parcial", settled: "Quitado" };
+  const statusLabel = { open: "Em aberto", partial: "Parcial", settled: "Quitado", merged: "Unificada" };
 
   function render() {
     const data = applyFilters();
@@ -1768,8 +1891,10 @@
         tr.innerHTML =
           '<td class="num">' + (i + 1) + '</td>' +
           '<td class="name">' + escapeHtml(r.nome) +
-            (r.edited ? '<span class="edited-flag">• editado</span>' : '') +
-            ((diaInfo || parcChip || vencInfo) ? '<div class="meta-chips">' + vencInfo + diaInfo + parcChip + '</div>' : '') +
+            (r.edited && !r.merged ? '<span class="edited-flag">• editado</span>' : '') +
+            (r.merged ? '<span class="merged-flag" title="Saldo transferido para uma conta unificada">✦ unificada</span>' : '') +
+            (r.renegociado && !r.merged ? '<span class="reneg-flag" title="Dívida renegociada — histórico anterior congelado">🤝 renegociada</span>' : '') +
+            ((diaInfo || parcChip || vencInfo) && !r.merged ? '<div class="meta-chips">' + vencInfo + diaInfo + parcChip + '</div>' : '') +
           '</td>' +
           '<td data-label="Status"><span class="status ' + r.status + '"><span class="sdot"></span>' + statusLabel[r.status] + '</span></td>' +
           '<td data-label="Falta pagar" class="money ' + (r.saldo > 0 ? "debt" : "muted") + '">' + (r.saldo > 0 ? fmtBRL.format(r.saldo) : "—") + '</td>' +
@@ -1780,9 +1905,11 @@
           '<td data-label="Progresso"><div class="bar"><span style="width:' + r.pct + '%"></span></div><span class="pct">' + r.pct + '% pago</span></td>' +
           '<td data-label="Criado em" class="date">' + (r.data || "—") + '</td>' +
           '<td data-label="Ações"><div class="row-actions">' +
-            (r.status === "settled"
-              ? '<button class="pay-btn settled" disabled>✓ Quitado</button>'
-              : '<button class="pay-btn" data-key="' + r.key + '">+ Pagamento</button>') +
+            (r.status === "merged"
+              ? '<button class="pay-btn merged" disabled>✦ Unificada</button>'
+              : r.status === "settled"
+                ? '<button class="pay-btn settled" disabled>✓ Quitado</button>'
+                : '<button class="pay-btn" data-key="' + r.key + '">+ Pagamento</button>') +
             '<button class="det-btn" data-key="' + r.key + '">Detalhes</button>' +
           '</div></td>';
         frag.appendChild(tr);
@@ -1800,9 +1927,13 @@
   function renderKpis() {
     const all = rows();
     const totalDebt = all.reduce((s, r) => s + r.saldo, 0);
-    const totalPaid = all.reduce((s, r) => s + r.recebido, 0);
-    const totalGross = all.reduce((s, r) => s + r.total, 0);
-    const openCount = all.filter(r => r.status !== "settled").length;
+    // valores congelados por renegociação: dinheiro real já recebido no passado
+    const congeladoReneg = all.reduce((s, r) => s + (Number(r.renegPagoAntes) || 0), 0);
+    const totalPaid = all.reduce((s, r) => s + r.recebido, 0) + congeladoReneg;
+    // conta unificada não entra no total faturado (o valor já está nas fichas de origem)
+    // + soma o que foi congelado na renegociação (fazia parte do valor original)
+    const totalGross = all.reduce((s, r) => s + (r.unificada ? 0 : r.total), 0) + congeladoReneg;
+    const openCount = all.filter(r => r.status !== "settled" && r.status !== "merged").length;
     const settledCount = all.length - openCount;
     const vencidoTotal = all.reduce((s, r) => s + (r.vencidoValor || 0), 0);
     const vencidoFichas = all.filter(r => (r.vencidoValor || 0) > 0.005).length;
@@ -1902,6 +2033,7 @@
     const b = base.find(x => x.key === key);
     if (!b) return;
     const r = compute(b);
+    if (r.merged) { showToast("Ficha unificada — cobre pela conta unificada."); return; }
     activeKey = key;
     mClient.textContent = r.nome;
     mPaid.textContent = fmtBRL.format(r.recebido);
@@ -2006,6 +2138,8 @@
   const detOverlay = document.getElementById("det-overlay");
   const dClient = document.getElementById("d-client");
   const dNome = document.getElementById("d-nome");
+  const dValor = document.getElementById("d-valor");
+  const dValorHint = document.getElementById("d-valor-hint");
   const dPaid = document.getElementById("d-paid");
   const dDebt = document.getElementById("d-debt");
   const dDia = document.getElementById("d-dia");
@@ -2111,12 +2245,36 @@
   }
 
   function renderHist(r) {
-    dHistCount.textContent = r.pagos.length;
-    if (!r.pagos.length) {
+    const hist = Array.isArray(r.pagosHist) ? r.pagosHist : [];
+    const temHist = hist.length > 0 || (r.renegociado && (r.renegPagoAntes || 0) > 0.005);
+    dHistCount.textContent = r.pagos.length + hist.length;
+
+    let html = "";
+
+    // bloco congelado da renegociação (pagamentos antigos preservados)
+    if (temHist) {
+      html += '<div class="hist-reneg-head">🔒 Pagamentos antes da renegociação' +
+        (r.renegEm ? ' (' + escapeHtml(r.renegEm) + ')' : '') +
+        ' · total ' + fmtBRL.format(r.renegPagoAntes || 0) + '</div>';
+      html += hist.map(p =>
+        '<div class="hist-item frozen">' +
+          '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
+          '<div class="hi-mid">' +
+            '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
+            (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
+          '</div>' +
+          '<span class="hi-lock" title="Congelado pela renegociação">🔒</span>' +
+        '</div>'
+      ).join("");
+      if (r.pagos.length) html += '<div class="hist-reneg-head">Pagamentos do novo acordo</div>';
+    }
+
+    if (!r.pagos.length && !temHist) {
       dHist.innerHTML = '<div class="hist-empty">Nenhum pagamento registrado ainda.</div>';
       return;
     }
-    dHist.innerHTML = r.pagos.map((p, idx) =>
+
+    html += r.pagos.map((p, idx) =>
       '<div class="hist-item">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
@@ -2126,6 +2284,8 @@
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
       '</div>'
     ).join("");
+
+    dHist.innerHTML = html;
   }
 
   function openDetails(key) {
@@ -2136,6 +2296,8 @@
     const r = compute(b);
     dClient.textContent = r.nome;
     dNome.value = r.nome;
+    dValor.value = (Number(b.total) || 0).toFixed(2).replace(".", ",");
+    dValorHint.textContent = "";
     dPaid.textContent = fmtBRL.format(r.recebido);
     dDebt.textContent = fmtBRL.format(r.saldo);
     dParcelas.value = e.parcelas > 0 ? String(e.parcelas) : "";
@@ -2164,6 +2326,9 @@
     renderParcSummary(r);
     renderVencList(r);
     renderHist(r);
+    // botão Renegociação: só faz sentido com saldo em aberto e ficha não unificada
+    const btnReneg = document.getElementById("d-reneg");
+    if (btnReneg) btnReneg.style.display = (!r.merged && r.saldo > 0.005) ? "" : "none";
     // abre sempre em modo somente-leitura (travado)
     travarDetalhes();
     // rola o modal de volta para o topo ao abrir
@@ -2175,7 +2340,7 @@
   // ---- modo edição: trava/destrava os campos do modal de detalhes ----
   let detEditavel = false;
   function camposDetalhe(){
-    return [dNome, dPrimeira, dParcelas, dDia];
+    return [dNome, dValor, dPrimeira, dParcelas, dDia];
   }
   function travarDetalhes(){
     detEditavel = false;
@@ -2188,6 +2353,13 @@
     // mostra botão Editar, esconde Salvar
     document.getElementById("d-edit").style.display = "";
     document.getElementById("d-save").style.display = "none";
+    // botão renegociação volta a aparecer (se a ficha tiver saldo) ao sair da edição
+    const bReneg = document.getElementById("d-reneg");
+    const bAtual = detKey ? base.find(x => x.key === detKey) : null;
+    if (bReneg) {
+      const rr = bAtual ? compute(bAtual) : null;
+      bReneg.style.display = (rr && !rr.merged && rr.saldo > 0.005) ? "" : "none";
+    }
   }
   function destravarDetalhes(){
     detEditavel = true;
@@ -2201,9 +2373,61 @@
     // esconde botão Editar, mostra Salvar
     document.getElementById("d-edit").style.display = "none";
     document.getElementById("d-save").style.display = "";
+    const bReneg = document.getElementById("d-reneg");
+    if (bReneg) bReneg.style.display = "none";
     showToast("Modo edição ativado — altere e clique em Salvar alterações.");
   }
   document.getElementById("d-edit").addEventListener("click", destravarDetalhes);
+
+  // ===== Renegociação =====
+  // Congela o histórico de pagamentos já feitos (não some, fica travado) e
+  // reinicia o acordo do zero: o novo valor digitado no Editar passa a ser o
+  // saldo total a pagar, com nova quantidade de parcelas e nova data.
+  document.getElementById("d-reneg").addEventListener("click", () => {
+    if (!detKey) return;
+    const b = base.find(x => x.key === detKey);
+    if (!b) return;
+    const e = entryFor(detKey);
+    const r = compute(b);
+
+    if (r.merged) { showToast("Ficha unificada não pode ser renegociada aqui."); return; }
+
+    const jaPago = Math.round(r.recebido * 100) / 100;
+    const saldoAtual = Math.round(r.saldo * 100) / 100;
+
+    if (!confirm(
+      'Renegociar a dívida de "' + b.nome + '"?\n\n' +
+      'O que já foi pago (' + fmtBRL.format(jaPago) + ') fica congelado no histórico e não some. ' +
+      'O acordo recomeça do zero: em seguida, use o Editar para definir o novo valor a pagar, ' +
+      'a quantidade de parcelas e a nova data.\n\n' +
+      'Saldo atual em aberto: ' + fmtBRL.format(saldoAtual) + '.'
+    )) return;
+
+    // congela os pagamentos atuais no histórico (junta com histórico anterior, se houver)
+    const congelar = (Array.isArray(e.pagosHist) ? e.pagosHist.slice() : []).concat(e.pagos || []);
+    e.pagosHist = congelar;
+    e.renegPagoAntes = Math.round((Number(e.renegPagoAntes || 0) + jaPago) * 100) / 100;
+    e.renegEm = hojeBR();
+    e.renegociado = true;
+    // zera o acordo atual: novo saldo = saldo que estava em aberto, começando limpo
+    e.pagos = [];
+    e.datasPagas = [];
+    e.valorTotal = saldoAtual;   // novo valor total = o que faltava (você ajusta no Editar)
+    // reinicia parcelas/vencimentos — você redefine no Editar
+    e.parcelas = 0;
+    e.vencimentos = [];
+    e.primeira = "";
+    e.dia = "";
+
+    rebuildBase();
+    persist();
+    render();
+
+    // reabre a ficha já em modo edição, pronta pra ajustar valor/parcelas/data
+    openDetails(detKey);
+    destravarDetalhes();
+    showToast("Renegociação iniciada — defina o novo valor, parcelas e data, e clique em Salvar.");
+  });
   function closeDetails() { detOverlay.classList.remove("show"); detKey = null; }
 
   // excluir cliente → move para a LIXEIRA (guarda tudo p/ restaurar depois)
@@ -2211,7 +2435,13 @@
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
     if (!b) return;
-    if (confirm('Enviar o cliente "' + b.nome + '" para a lixeira?\n\nEle sai da lista, mas fica guardado com os pagamentos e parcelas. Você pode restaurar depois pela Lixeira.')) {
+    // é uma conta unificada? (nova venda com flag unificada)
+    const vendaUnif = b.novaVenda ? novasVendas.find(v => v.id === detKey) : null;
+    const ehUnificada = vendaUnif && vendaUnif.unificada && Array.isArray(vendaUnif.mergedFrom) && vendaUnif.mergedFrom.length;
+    const msg = ehUnificada
+      ? 'Excluir a conta unificada "' + b.nome + '"?\n\nAs ' + vendaUnif.mergedFrom.length + ' fichas antigas voltam a ficar ativas, com o saldo restaurado. O que já estava no caixa é mantido. A conta unificada vai pra lixeira.'
+      : 'Enviar o cliente "' + b.nome + '" para a lixeira?\n\nEle sai da lista, mas fica guardado com os pagamentos e parcelas. Você pode restaurar depois pela Lixeira.';
+    if (confirm(msg)) {
       const item = {
         key: detKey,
         origem: b.novaVenda ? "venda" : "csv",
@@ -2221,6 +2451,8 @@
         venda: b.novaVenda ? (novasVendas.find(v => v.id === detKey) || null) : null,
         excluidoEm: hojeBR()
       };
+      // se for unificada, restaura as fichas de origem antes de apagar
+      if (ehUnificada) reverterUniao(detKey);
       lixeira = lixeira.filter(x => x.key !== detKey);
       lixeira.push(item);
       delete payments[detKey];
@@ -2234,7 +2466,7 @@
       persist();
       closeDetails();
       render();
-      showToast("Cliente movido para a lixeira.");
+      showToast(ehUnificada ? "Conta unificada excluída · fichas restauradas." : "Cliente movido para a lixeira.");
     }
   });
 
@@ -2254,7 +2486,24 @@
     const r = compute(b);
     const total = parseInt(dParcelas.value.replace(/\D/g, "")) || 0;
     renderParcSummary(r, total);
+    atualizaHintValor();
   });
+
+  function atualizaHintValor() {
+    if (!dValor || !dValorHint) return;
+    const v = parseInput(dValor.value);
+    const nParc = parseInt((dParcelas.value || "").replace(/\D/g, "")) || 0;
+    if (isNaN(v) || v <= 0) { dValorHint.textContent = ""; dValorHint.classList.remove("warn"); return; }
+    if (nParc > 0) {
+      const porParcela = Math.round((v / nParc) * 100) / 100;
+      dValorHint.textContent = nParc + "x de " + fmtBRL.format(porParcela) + " · total " + fmtBRL.format(v);
+      dValorHint.classList.remove("warn");
+    } else {
+      dValorHint.textContent = "Total " + fmtBRL.format(v) + " (à vista / sem parcelas definidas)";
+      dValorHint.classList.remove("warn");
+    }
+  }
+  if (dValor) dValor.addEventListener("input", atualizaHintValor);
 
   dGen.addEventListener("click", () => {
     const b = base.find(x => x.key === detKey);
@@ -2311,6 +2560,30 @@
     if (!detKey) return;
     const b = base.find(x => x.key === detKey);
     const e = entryFor(detKey);
+
+    // ---- valor total da compra (editável) ----
+    const valorDigitado = parseInput(dValor.value);
+    if (!isNaN(valorDigitado)) {
+      const novoTotal = Math.round(valorDigitado * 100) / 100;
+      if (novoTotal < 0) { dValorHint.textContent = "O valor não pode ser negativo."; dValorHint.classList.add("warn"); return; }
+      // o já recebido de base (recebidoOrig) + pagamentos extras não pode passar do novo total
+      const rAtual = compute(b);
+      const jaRecebido = Math.round(rAtual.recebido * 100) / 100;
+      if (novoTotal + 0.005 < jaRecebido) {
+        dValorHint.textContent = "O valor não pode ser menor que o já recebido (" + fmtBRL.format(jaRecebido) + "). Remova pagamentos antes de reduzir.";
+        dValorHint.classList.add("warn");
+        return;
+      }
+      // grava override do valor total
+      e.valorTotal = novoTotal;
+      // se for nova venda, atualiza também o registro da venda (mantém custo/lucro coerentes)
+      if (b.novaVenda) {
+        const v = novasVendas.find(x => x.id === detKey);
+        if (v) v.venda = novoTotal;
+      }
+    }
+    dValorHint.classList.remove("warn");
+
     const nomeNovo = (dNome.value || "").trim();
     if (nomeNovo && b && nomeNovo !== b.nome) {
       if (b.novaVenda) {
@@ -2799,6 +3072,199 @@
     return "venda-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
   }
 
+  /* ================= UNIÃO DE CONTAS =================
+     Junta o saldo em aberto de várias fichas numa conta nova (uma "nova venda").
+     As fichas de origem ficam congeladas (payments[key].mergedInto): param de
+     ser cobradas, mas continuam na lista com todo o histórico. O que já foi
+     recebido é preservado. Excluir a conta unificada restaura as fichas.
+  --------------------------------------------------- */
+  let uniaoSelecao = new Set();   // keys de fichas marcadas
+  let uniaoNomeEditado = false;   // true depois que o usuário mexe no nome
+
+  // Saldo em aberto de uma ficha (0 se já unificada/quitada)
+  function fichaSaldoAberto(b) {
+    const r = compute(b);
+    return r.merged ? 0 : Math.max(0, r.saldo);
+  }
+  // Uma ficha é "unível" se não está já unificada e tem saldo em aberto
+  function fichaUnivel(b) {
+    const e = normEntry(payments[b.key]);
+    if (e.mergedInto) return false;
+    return fichaSaldoAberto(b) > 0.005;
+  }
+  // Todas as fichas uníveis, ordenadas por nome e depois data
+  function fichasUniveis() {
+    return base.filter(fichaUnivel).sort((a, b) => {
+      const na = (a.nome || "").toLowerCase(), nb = (b.nome || "").toLowerCase();
+      if (na !== nb) return na < nb ? -1 : 1;
+      return (a.dataSort || 0) - (b.dataSort || 0);
+    });
+  }
+
+  function renderUniao() {
+    const cont = document.getElementById("uniaoConteudo");
+    if (!cont) return;
+    const todas = fichasUniveis();
+
+    if (!todas.length) {
+      cont.innerHTML = '<div class="card" style="padding:1.2rem"><p style="color:var(--ink-soft);text-align:center;margin:0">Nenhuma ficha com saldo em aberto pra unir no momento.</p></div>';
+      return;
+    }
+
+    const q = (document.getElementById("uniaoBusca").value || "").trim().toLowerCase();
+    const visiveis = q ? todas.filter(b => (b.nome || "").toLowerCase().includes(q)) : todas;
+
+    // seleção é global (persiste ao filtrar)
+    const marcadas = todas.filter(b => uniaoSelecao.has(b.key));
+    const totalUnir = marcadas.reduce((a, b) => a + fichaSaldoAberto(b), 0);
+    const podeUnir = marcadas.length >= 2;
+    const primeiro = marcadas[0];
+    const nomeSugerido = primeiro ? (primeiro.nome || "") : "";
+
+    let ultimoNome = null;
+    const linhas = visiveis.map(b => {
+      const aberto = fichaSaldoAberto(b);
+      const marcada = uniaoSelecao.has(b.key);
+      const r = compute(b);
+      const nome = (b.nome || "—").trim() || "—";
+      let cab = "";
+      if (nome !== ultimoNome) { cab = '<div class="uniao-cli-head">' + escapeHtml(nome) + '</div>'; ultimoNome = nome; }
+      const metaBits = [];
+      if (r.parcelasTotal > 0) metaBits.push(r.parcelasFaltam + " parcela" + (r.parcelasFaltam !== 1 ? "s" : "") + " em aberto");
+      if (r.recebido > 0.005) metaBits.push(fmtBRL.format(r.recebido) + " já no caixa");
+      if (b.data) metaBits.push(b.data);
+      return cab +
+        '<label class="uniao-row' + (marcada ? " on" : "") + '">' +
+          '<input type="checkbox" data-key="' + escapeHtml(b.key) + '" ' + (marcada ? "checked" : "") + '>' +
+          '<div class="uniao-row-body">' +
+            '<div class="uniao-row-top"><strong>' + escapeHtml(nome) + '</strong>' +
+              '<span class="uniao-row-val">' + fmtBRL.format(aberto) + '</span></div>' +
+            '<div class="uniao-row-meta">' + (metaBits.join(" · ") || "Saldo em aberto") + '</div>' +
+          '</div>' +
+        '</label>';
+    }).join("");
+
+    const listaHtml = visiveis.length
+      ? '<div class="uniao-list">' + linhas + '</div>'
+      : '<p style="color:var(--ink-soft);text-align:center;padding:1rem 0">Nada encontrado pra "' + escapeHtml(q) + '".</p>';
+
+    const nomeInput = document.getElementById("uniaoNomeNovo");
+    const nomeAtual = (nomeInput && uniaoNomeEditado) ? nomeInput.value : nomeSugerido;
+
+    cont.innerHTML =
+      '<div class="card" style="padding:1.1rem 1.2rem">' +
+        '<p style="color:var(--ink-soft);font-size:.86rem;margin:0 0 .9rem">' +
+          'Marque as fichas que quer unir (pelo menos duas), de qualquer cliente. Só o saldo em aberto entra — o que já foi pago fica preservado.' +
+        '</p>' +
+        listaHtml +
+        '<div class="uniao-resumo">' +
+          '<div><div class="uniao-resumo-lbl">Selecionadas</div>' +
+            '<div class="uniao-resumo-val">' + marcadas.length + ' ficha' + (marcadas.length !== 1 ? "s" : "") + '</div></div>' +
+          '<div><div class="uniao-resumo-lbl">Total da conta nova</div>' +
+            '<div class="uniao-resumo-val strong">' + fmtBRL.format(totalUnir) + '</div></div>' +
+        '</div>' +
+        '<div class="field-uniao" style="margin-top:.9rem">' +
+          '<label style="display:block;font-size:.82rem;font-weight:600;color:var(--ink-soft);margin-bottom:.3rem">Nome da conta nova</label>' +
+          '<input type="text" id="uniaoNomeNovo" placeholder="Nome do cliente da conta unificada" value="' + escapeHtml(nomeAtual) + '" autocomplete="off" ' +
+            'style="width:100%;padding:.6rem .8rem;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:.92rem">' +
+          '<span style="color:var(--ink-soft);font-size:.76rem;display:block;margin-top:.25rem">Sugerido a partir da primeira ficha marcada — pode alterar.</span>' +
+        '</div>' +
+        '<button class="uniao-btn" id="uniaoConfirmar" ' + (podeUnir ? "" : "disabled") + '>' +
+          'Unir ' + (marcadas.length >= 2 ? marcadas.length + " fichas" : "fichas") + ' · ' + fmtBRL.format(totalUnir) +
+        '</button>' +
+      '</div>';
+
+    cont.querySelectorAll('input[type="checkbox"][data-key]').forEach(cb => {
+      cb.addEventListener("change", () => {
+        const k = cb.dataset.key;
+        if (cb.checked) uniaoSelecao.add(k); else uniaoSelecao.delete(k);
+        renderUniao();
+      });
+    });
+    const nn = document.getElementById("uniaoNomeNovo");
+    if (nn) nn.addEventListener("input", () => { uniaoNomeEditado = true; });
+    const btn = document.getElementById("uniaoConfirmar");
+    if (btn) btn.addEventListener("click", confirmarUniao);
+  }
+
+  function confirmarUniao() {
+    const marcadas = fichasUniveis().filter(b => uniaoSelecao.has(b.key));
+    if (marcadas.length < 2) { showToast("Selecione pelo menos duas fichas."); return; }
+
+    const total = Math.round(marcadas.reduce((a, b) => a + fichaSaldoAberto(b), 0) * 100) / 100;
+    if (total <= 0.005) { showToast("Não há saldo em aberto para unir."); return; }
+
+    const nomeInput = document.getElementById("uniaoNomeNovo");
+    const nomeCliente = (nomeInput ? nomeInput.value : "").trim();
+    if (!nomeCliente) {
+      showToast("Digite o nome da conta nova.");
+      if (nomeInput) nomeInput.focus();
+      return;
+    }
+
+    const nomesDistintos = [...new Set(marcadas.map(b => (b.nome || "").toLowerCase()).filter(Boolean))];
+    const avisoMisto = nomesDistintos.length > 1
+      ? '\n\nAtenção: você está unindo fichas de clientes diferentes numa conta só no nome de "' + nomeCliente + '".'
+      : "";
+
+    if (!confirm(
+      "Unir " + marcadas.length + " fichas em uma nova conta de " + fmtBRL.format(total) + " no nome de " + nomeCliente + "?" + avisoMisto +
+      "\n\nAs fichas antigas ficam preservadas na lista (o que já foi pago continua no caixa) e param de ser cobradas. A conta nova nasce com o total em aberto."
+    )) return;
+
+    // 1) cria a conta unificada como uma nova venda
+    const novaId = gerarIdVenda();
+    novasVendas.push({
+      id: novaId,
+      nome: nomeCliente,
+      custo: 0,
+      venda: total,
+      data: hojeBR(),
+      criadoEm: hojeBR(),
+      unificada: true,
+      mergedFrom: marcadas.map(b => b.key)
+    });
+    const en = entryFor(novaId);
+    en.parcelas = 0;
+    en.primeira = "";
+    en.rotina = "mensal";
+    en.dia = "";
+    en.vencimentos = [];
+
+    // 2) congela cada ficha de origem
+    //    IMPORTANTE: captura o saldo ANTES de marcar mergedInto (senão vira 0)
+    marcadas.forEach(b => {
+      const saldoTransferido = Math.round(fichaSaldoAberto(b) * 100) / 100;
+      const e = entryFor(b.key);
+      e.mergedInto = novaId;
+      e.mergedSaldo = saldoTransferido;
+      e.mergedEm = hojeBR();
+    });
+
+    uniaoSelecao = new Set();
+    uniaoNomeEditado = false;
+    const buscaEl = document.getElementById("uniaoBusca");
+    if (buscaEl) buscaEl.value = "";
+
+    rebuildBase();
+    persist();
+    render();
+    renderUniao();
+    showToast("Contas unidas — nova conta de " + fmtBRL.format(total) + ".");
+  }
+
+  // Reverte a união: restaura as fichas de origem (chamado ao excluir a conta unificada)
+  function reverterUniao(novaId) {
+    for (const key of Object.keys(payments)) {
+      const e = payments[key];
+      if (e && e.mergedInto === novaId) {
+        e.mergedInto = null;
+        e.mergedSaldo = null;
+        e.mergedEm = "";
+      }
+    }
+  }
+
   function salvarNovaVenda() {
     const nome = (nvNome.value || "").trim();
     const custo = parseInput(nvCusto.value) || 0;
@@ -3105,10 +3571,17 @@
     btn.classList.add("active");
     const view = btn.dataset.view;
     document.getElementById("view-gestao").style.display = view === "gestao" ? "" : "none";
+    document.getElementById("view-uniao").style.display = view === "uniao" ? "" : "none";
     document.getElementById("view-relatorios").style.display = view === "relatorios" ? "" : "none";
     document.getElementById("view-config").style.display = view === "config" ? "" : "none";
+    if (view === "uniao") renderUniao();
     if (view === "relatorios") renderRelatorios();
     if (view === "config") carregarFormEmpresa();
+  });
+
+  // busca da União: filtra a lista ao digitar (não limpa a seleção já feita)
+  document.getElementById("uniaoBusca").addEventListener("input", () => {
+    renderUniao();
   });
 
   document.getElementById("rep-periods").addEventListener("click", e => {
@@ -3159,7 +3632,9 @@
 
     all.forEach(f => {
       const dtCriacao = parseDateBR(f.data);
-      if (dentroPeriodo(dtCriacao, ini, fim)) {
+      // conta unificada NÃO conta como faturamento novo — o valor já existia
+      // como dívida nas fichas de origem (evita dobrar receita nos relatórios)
+      if (dentroPeriodo(dtCriacao, ini, fim) && !f.unificada) {
         vendasFeitas += f.total;
         vendasCount++;
         if (f.novaVenda) {
@@ -3169,7 +3644,9 @@
           lucroPrevisto += (f.venda - (f.custo || 0));
         }
       }
-      (f.pagos || []).forEach(p => {
+      // pagamentos ativos + congelados por renegociação (ambos são dinheiro real recebido)
+      const todosPagamentos = (f.pagos || []).concat(Array.isArray(f.pagosHist) ? f.pagosHist : []);
+      todosPagamentos.forEach(p => {
         const dtPg = parseDateBR(p.data);
         if (dentroPeriodo(dtPg, ini, fim)) {
           const v = Number(p.valor) || 0;
@@ -3340,7 +3817,8 @@
     const idx = {};
     meses.forEach((m, i) => idx[m.chave] = i);
     all.forEach(f => {
-      (f.pagos || []).forEach(p => {
+      const todos = (f.pagos || []).concat(Array.isArray(f.pagosHist) ? f.pagosHist : []);
+      todos.forEach(p => {
         const dt = parseDateBR(p.data);
         if (!dt) return;
         const ch = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0");
