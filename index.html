@@ -319,7 +319,12 @@
   .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
   .hist-item .hi-mid{flex:1;min-width:0}
   .hist-item .hi-date{font-size:.78rem;color:var(--ink-soft);font-weight:600}
-  .hist-item .hi-obs{font-size:.82rem;margin-top:.15rem;word-break:break-word}
+  .hist-item .hi-obs{font-size:.78rem;color:var(--ink-soft);word-break:break-word}
+  .hist-item .hi-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.25rem;align-items:center}
+  .hist-item .hi-forma{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;background:var(--line-soft);color:var(--ink)}
+  .hist-item .hi-forma-desconto{background:#fff3cd;color:#8a6d00}
+  .hist-item.is-desconto{background:#fffaf0;border-color:#f5deb3}
+  .hist-item.is-desconto .hi-val{color:#8a6d00}
   .hist-item .hi-del{border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;padding:.1rem .3rem;border-radius:6px;line-height:1}
   .hist-item .hi-del:hover{color:var(--debt);background:var(--line-soft)}
   .hist-empty{text-align:center;color:var(--ink-soft);font-size:.85rem;padding:1.5rem 0}
@@ -795,8 +800,14 @@
         </div>
       </div>
       <div class="field" style="margin-top:1rem">
-        <label for="m-obs">Observação <span style="font-weight:400;color:var(--ink-soft)">(opcional)</span></label>
-        <input id="m-obs" type="text" placeholder="Ex: pago em dinheiro, parcela 3…" style="padding-left:.9rem;font-size:.92rem;font-weight:500">
+        <label for="m-forma">Forma de pagamento</label>
+        <select id="m-forma" style="padding:.7rem .9rem;font-size:1rem;font-weight:600;border:1px solid var(--line);border-radius:.6rem;background:#fff;color:var(--ink)">
+          <option value="dinheiro">💵 Dinheiro</option>
+          <option value="pix">📲 Pix</option>
+          <option value="deposito">🏦 Depósito</option>
+          <option value="credito">💳 Crédito</option>
+          <option value="desconto">🎁 Desconto (não entra no caixa)</option>
+        </select>
         <div class="err" id="m-err"></div>
       </div>
     </div>
@@ -1762,9 +1773,14 @@
   function compute(b) {
     const e = normEntry(payments[b.key]);
     const extra = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-    let recebido = b.recebidoOrig + extra;
+    // separa a parte que é desconto (não entra no caixa) da parte que é dinheiro real
+    const extraDesconto = e.pagos.reduce((s, p) => s + (isDesconto(p) ? (Number(p.valor) || 0) : 0), 0);
+    const extraCaixa = extra - extraDesconto;
+    let recebido = b.recebidoOrig + extra;                 // total abatido (usa pra barra/status)
+    let recebidoCaixa = b.recebidoOrig + extraCaixa;       // só o que entrou no caixa
     let saldo = Math.max(0, b.saldoOrig - extra);
     if (recebido > b.total) recebido = b.total;
+    if (recebidoCaixa > b.total) recebidoCaixa = b.total;
     const pct = b.total > 0 ? Math.min(100, Math.round((recebido / b.total) * 100)) : 0;
     let status;
     if (saldo <= 0.005) status = "settled";
@@ -1824,7 +1840,7 @@
     }
 
     return {
-      ...b, recebido, saldo, pct, status,
+      ...b, recebido, recebidoCaixa, descontoTotal: extraDesconto, saldo, pct, status,
       merged, mergedInto: e.mergedInto || null, mergedSaldo: e.mergedSaldo, mergedEm: e.mergedEm || "",
       renegociado: !!e.renegociado, renegEm: e.renegEm || "", renegPagoAntes: Number(e.renegPagoAntes) || 0,
       pagosHist: Array.isArray(e.pagosHist) ? e.pagosHist : [],
@@ -1929,7 +1945,7 @@
     const totalDebt = all.reduce((s, r) => s + r.saldo, 0);
     // valores congelados por renegociação: dinheiro real já recebido no passado
     const congeladoReneg = all.reduce((s, r) => s + (Number(r.renegPagoAntes) || 0), 0);
-    const totalPaid = all.reduce((s, r) => s + r.recebido, 0) + congeladoReneg;
+    const totalPaid = all.reduce((s, r) => s + r.recebidoCaixa, 0) + congeladoReneg;
     // conta unificada não entra no total faturado (o valor já está nas fichas de origem)
     // + soma o que foi congelado na renegociação (fazia parte do valor original)
     const totalGross = all.reduce((s, r) => s + (r.unificada ? 0 : r.total), 0) + congeladoReneg;
@@ -2017,8 +2033,17 @@
   const mPaid = document.getElementById("m-paid");
   const mDebt = document.getElementById("m-debt");
   const mAmount = document.getElementById("m-amount");
-  const mObs = document.getElementById("m-obs");
+  const mForma = document.getElementById("m-forma");
   const mData = document.getElementById("m-data");
+  // rótulos e helpers da forma de pagamento
+  const FORMA_LABEL = { dinheiro:"Dinheiro", pix:"Pix", deposito:"Depósito", credito:"Crédito", desconto:"Desconto" };
+  const FORMA_ICON  = { dinheiro:"💵", pix:"📲", deposito:"🏦", credito:"💳", desconto:"🎁" };
+  function isDesconto(p) { return p && p.forma === "desconto"; }
+  function formaDe(p) {
+    // retrocompatibilidade: pagamento antigo sem forma conta como dinheiro
+    if (!p) return "dinheiro";
+    return p.forma || "dinheiro";
+  }
   const mErr = document.getElementById("m-err");
   const mQuick = document.getElementById("m-quick");
   let activeKey = null;
@@ -2039,7 +2064,7 @@
     mPaid.textContent = fmtBRL.format(r.recebido);
     mDebt.textContent = fmtBRL.format(r.saldo);
     mAmount.value = "";
-    mObs.value = "";
+    mForma.value = "dinheiro";
     mData.value = hojeBR();
     mErr.textContent = "";
     const half = Math.round((r.saldo / 2) * 100) / 100;
@@ -2071,7 +2096,7 @@
     }
     const e = entryFor(activeKey);
     const dataPg = parseDateBR((mData.value || "").trim()) ? (mData.value || "").trim() : hojeBR();
-    e.pagos.push({ valor: val, data: dataPg, obs: (mObs.value || "").trim() });
+    e.pagos.push({ valor: val, data: dataPg, forma: mForma.value || "dinheiro" });
 
     // congela a data das parcelas que ficaram quitadas AGORA (sem tocar nas já congeladas)
     congelarDatasPagas(e, b, dataPg);
@@ -2079,7 +2104,12 @@
     persist();
     closeModal();
     render();
-    showToast("Pagamento de " + fmtBRL.format(val) + " registrado para " + b.nome);
+    const foiDesconto = mForma.value === "desconto";
+    showToast(
+      (foiDesconto ? "Desconto de " : "Pagamento de ") +
+      fmtBRL.format(val) +
+      (foiDesconto ? " concedido a " : " registrado para ") + b.nome
+    );
   }
 
   // grava a data de pagamento SOMENTE nas parcelas quitadas por ESTE pagamento.
@@ -2113,8 +2143,8 @@
   document.getElementById("m-confirm").addEventListener("click", confirmPayment);
   document.getElementById("m-cancel").addEventListener("click", closeModal);
   overlay.addEventListener("click", e => { if (e.target === overlay) closeModal(); });
-  mAmount.addEventListener("keydown", e => { if (e.key === "Enter") mObs.focus(); });
-  mObs.addEventListener("keydown", e => { if (e.key === "Enter") confirmPayment(); });
+  mAmount.addEventListener("keydown", e => { if (e.key === "Enter") mForma.focus(); });
+  mForma.addEventListener("keydown", e => { if (e.key === "Enter") confirmPayment(); });
   document.addEventListener("keydown", e => {
     if (e.key !== "Escape") return;
     if (overlay.classList.contains("show")) closeModal();
@@ -2257,14 +2287,19 @@
         (r.renegEm ? ' (' + escapeHtml(r.renegEm) + ')' : '') +
         ' · total ' + fmtBRL.format(r.renegPagoAntes || 0) + '</div>';
       html += hist.map(p =>
-        '<div class="hist-item frozen">' +
-          '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
-          '<div class="hi-mid">' +
-            '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
-            (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
-          '</div>' +
-          '<span class="hi-lock" title="Congelado pela renegociação">🔒</span>' +
-        '</div>'
+        (() => {
+          const f = formaDe(p);
+          const chipForma = '<span class="hi-forma hi-forma-' + f + '">' + FORMA_ICON[f] + " " + FORMA_LABEL[f] + '</span>';
+          const obsLegado = p.obs ? '<span class="hi-obs">' + escapeHtml(p.obs) + '</span>' : '';
+          return '<div class="hist-item frozen' + (isDesconto(p) ? ' is-desconto' : '') + '">' +
+            '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
+            '<div class="hi-mid">' +
+              '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
+              '<div class="hi-tags">' + chipForma + obsLegado + '</div>' +
+            '</div>' +
+            '<span class="hi-lock" title="Congelado pela renegociação">🔒</span>' +
+          '</div>';
+        })()
       ).join("");
       if (r.pagos.length) html += '<div class="hist-reneg-head">Pagamentos do novo acordo</div>';
     }
@@ -2274,16 +2309,20 @@
       return;
     }
 
-    html += r.pagos.map((p, idx) =>
-      '<div class="hist-item">' +
+    html += r.pagos.map((p, idx) => {
+      const f = formaDe(p);
+      const rotulo = (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada");
+      const chipForma = '<span class="hi-forma hi-forma-' + f + '">' + FORMA_ICON[f] + " " + FORMA_LABEL[f] + '</span>';
+      const obsLegado = p.obs ? '<span class="hi-obs">' + escapeHtml(p.obs) + '</span>' : '';
+      return '<div class="hist-item' + (isDesconto(p) ? ' is-desconto' : '') + '">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
-          '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
-          (p.obs ? '<div class="hi-obs">' + escapeHtml(p.obs) + '</div>' : '') +
+          '<div class="hi-date">' + rotulo + '</div>' +
+          '<div class="hi-tags">' + chipForma + obsLegado + '</div>' +
         '</div>' +
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
-      '</div>'
-    ).join("");
+      '</div>';
+    }).join("");
 
     dHist.innerHTML = html;
   }
@@ -3131,7 +3170,7 @@
       if (nome !== ultimoNome) { cab = '<div class="uniao-cli-head">' + escapeHtml(nome) + '</div>'; ultimoNome = nome; }
       const metaBits = [];
       if (r.parcelasTotal > 0) metaBits.push(r.parcelasFaltam + " parcela" + (r.parcelasFaltam !== 1 ? "s" : "") + " em aberto");
-      if (r.recebido > 0.005) metaBits.push(fmtBRL.format(r.recebido) + " já no caixa");
+      if (r.recebidoCaixa > 0.005) metaBits.push(fmtBRL.format(r.recebidoCaixa) + " já no caixa");
       if (b.data) metaBits.push(b.data);
       return cab +
         '<label class="uniao-row' + (marcada ? " on" : "") + '">' +
@@ -3649,6 +3688,8 @@
       todosPagamentos.forEach(p => {
         const dtPg = parseDateBR(p.data);
         if (dentroPeriodo(dtPg, ini, fim)) {
+          // desconto não entra no caixa nem no lucro recebido (foi valor perdoado, não recebido)
+          if (isDesconto(p)) return;
           const v = Number(p.valor) || 0;
           recebidoPeriodo += v;
           topClientes[f.nome] = (topClientes[f.nome] || 0) + v;
