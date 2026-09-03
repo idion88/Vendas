@@ -319,13 +319,26 @@
   .hist-item .hi-val{font-weight:700;color:var(--paid);font-variant-numeric:tabular-nums;white-space:nowrap}
   .hist-item .hi-mid{flex:1;min-width:0}
   .hist-item .hi-date{font-size:.78rem;color:var(--ink-soft);font-weight:600}
-  .hist-item .hi-obs{font-size:.78rem;color:var(--ink-soft);word-break:break-word}
-  .hist-item .hi-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.25rem;align-items:center}
-  .hist-item .hi-forma{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;background:var(--line-soft);color:var(--ink)}
-  .hist-item .hi-forma-desconto{background:#fff3cd;color:#8a6d00}
-  .hist-item.is-desconto{background:#fffaf0;border-color:#f5deb3}
-  .hist-item.is-desconto .hi-val{color:#8a6d00}
+  .hist-item .hi-obs{font-size:.82rem;margin-top:.15rem;word-break:break-word}
   .hist-item .hi-del{border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;padding:.1rem .3rem;border-radius:6px;line-height:1}
+  .hi-tags{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.25rem;align-items:center}
+  .hi-forma{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line);text-transform:uppercase;letter-spacing:.02em}
+  .hi-forma-desconto{background:#fff3cd;color:#8a6d00;border-color:#f0d97a}
+  html[data-theme="dark"] .hi-forma-desconto{background:#3a2f0a;color:#f7d76a;border-color:#5a4a10}
+  .hist-item.is-desconto{border-left:3px solid #d4a72c}
+  .hist-item.is-desconto .hi-val{color:#8a6d00}
+  html[data-theme="dark"] .hist-item.is-desconto .hi-val{color:#f7d76a}
+  .m-sugestao{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:.7rem .85rem;margin-top:.9rem;font-size:.85rem}
+  .m-sugestao .ms-head{font-size:.72rem;font-weight:800;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem}
+  .m-sugestao .ms-row{display:flex;justify-content:space-between;gap:.5rem;padding:.35rem 0;border-top:1px dashed var(--line)}
+  .m-sugestao .ms-row:first-of-type{border-top:none}
+  .m-sugestao .ms-lbl{color:var(--ink-soft);font-weight:600}
+  .m-sugestao .ms-val{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .m-sugestao .ms-val-total{color:var(--debt)}
+  .m-sugestao .ms-quick{margin-top:.6rem;display:flex;flex-wrap:wrap;gap:.35rem}
+  .m-sugestao .ms-quick button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:.35rem .6rem;font-size:.78rem;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+  .m-sugestao .ms-quick button:hover{background:var(--row-hover)}
+  .m-sugestao .ms-foot{margin-top:.55rem;font-size:.72rem;color:var(--ink-soft);font-style:italic}
   .hist-item .hi-del:hover{color:var(--debt);background:var(--line-soft)}
   .hist-empty{text-align:center;color:var(--ink-soft);font-size:.85rem;padding:1.5rem 0}
 
@@ -767,6 +780,12 @@
         <input id="cfg-cnpj" type="text" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" style="padding-left:.9rem;font-size:1rem">
       </div>
 
+      <div class="field cfg-field">
+        <label for="cfg-juros">Taxa de juros por dia de atraso (%) <span style="font-weight:400;color:var(--ink-soft)">(opcional — exibido só como sugestão)</span></label>
+        <input id="cfg-juros" type="text" inputmode="decimal" placeholder="Ex: 0,5" style="padding-left:.9rem;font-size:1rem">
+        <div class="cfg-hint" style="margin-top:.4rem">Ao registrar um pagamento, aparece o valor sugerido por parcela em atraso, já com juros acumulados dia a dia sobre o saldo devedor e arredondado pra cima. Não altera a dívida real — é só informação.</div>
+      </div>
+
       <div class="cfg-actions">
         <button class="btn-confirm" id="cfg-save">Salvar configurações</button>
       </div>
@@ -799,6 +818,7 @@
           <input type="date" class="cal-native" data-target="m-data" title="Escolher data">
         </div>
       </div>
+      <div id="m-sugestao" class="m-sugestao" style="display:none"></div>
       <div class="field" style="margin-top:1rem">
         <label for="m-forma">Forma de pagamento</label>
         <select id="m-forma" style="width:100%;padding:.75rem .9rem;font-size:1rem;font-weight:600;border:1px solid var(--line);border-radius:11px;background:var(--input-bg);color:var(--ink);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%),linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:2.2rem">
@@ -1773,11 +1793,10 @@
   function compute(b) {
     const e = normEntry(payments[b.key]);
     const extra = e.pagos.reduce((s, p) => s + (Number(p.valor) || 0), 0);
-    // separa a parte que é desconto (não entra no caixa) da parte que é dinheiro real
     const extraDesconto = e.pagos.reduce((s, p) => s + (isDesconto(p) ? (Number(p.valor) || 0) : 0), 0);
     const extraCaixa = extra - extraDesconto;
-    let recebido = b.recebidoOrig + extra;                 // total abatido (usa pra barra/status)
-    let recebidoCaixa = b.recebidoOrig + extraCaixa;       // só o que entrou no caixa
+    let recebido = b.recebidoOrig + extra;
+    let recebidoCaixa = b.recebidoOrig + extraCaixa;
     let saldo = Math.max(0, b.saldoOrig - extra);
     if (recebido > b.total) recebido = b.total;
     if (recebidoCaixa > b.total) recebidoCaixa = b.total;
@@ -2034,16 +2053,12 @@
   const mDebt = document.getElementById("m-debt");
   const mAmount = document.getElementById("m-amount");
   const mForma = document.getElementById("m-forma");
-  const mData = document.getElementById("m-data");
-  // rótulos e helpers da forma de pagamento
+  const mSugestao = document.getElementById("m-sugestao");
   const FORMA_LABEL = { dinheiro:"Dinheiro", pix:"Pix", deposito:"Depósito", credito:"Crédito", desconto:"Desconto" };
   const FORMA_ICON  = { dinheiro:"💵", pix:"📲", deposito:"🏦", credito:"💳", desconto:"🎁" };
   function isDesconto(p) { return p && p.forma === "desconto"; }
-  function formaDe(p) {
-    // retrocompatibilidade: pagamento antigo sem forma conta como dinheiro
-    if (!p) return "dinheiro";
-    return p.forma || "dinheiro";
-  }
+  function formaDe(p) { if (!p) return "dinheiro"; return p.forma || "dinheiro"; }
+  const mData = document.getElementById("m-data");
   const mErr = document.getElementById("m-err");
   const mQuick = document.getElementById("m-quick");
   let activeKey = null;
@@ -2053,6 +2068,211 @@
     return String(d.getDate()).padStart(2, "0") + "/" +
            String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
   }
+
+  // ====================== SUGESTÃO DE JUROS POR ATRASO ======================
+  // Modelo:
+  // - Cada parcela é uma conta independente com seu principal e seu juros acumulado.
+  // - Ao vencer, a parcela começa a acumular juros diários sobre o PRINCIPAL em aberto.
+  // - O juros acumulado NÃO gera juros (fica pendurado, sem render).
+  // - Pagamento abate primeiro o principal da parcela mais antiga; sobra vai pro juros
+  //   pendurado dela; sobra desce pra próxima parcela (principal, depois juros); e assim por diante.
+  // - Enquanto qualquer principal de qualquer parcela estiver em aberto, ele continua rendendo juros.
+  // - Uma parcela com principal zerado mas juros ainda em aberto NÃO gera mais juros novos,
+  //   mas o valor pendurado continua devido até ser pago.
+  function calcularSugestoesJuros(b) {
+    const taxaDia = Number(empresa && empresa.taxaJurosDia) || 0;
+    if (taxaDia <= 0) return { taxaDia: 0, itens: [], total: 0 };
+    const e = normEntry(payments[b.key]);
+    const total = Number(e.parcelas) || 0;
+    if (total <= 0) return { taxaDia, itens: [], total: 0 };
+    const valorParcela = b.total / total;
+    const hoje = hojeMeiaNoite();
+    const venc = e.vencimentos || [];
+    const taxa = taxaDia / 100;
+
+    // estado de cada parcela
+    const parcelas = [];
+    for (let i = 0; i < total; i++) {
+      const dt = parseDateBR(venc[i] || "");
+      parcelas.push({
+        num: i + 1,
+        venc: venc[i] || "",
+        vencDt: dt,
+        principal: valorParcela,
+        juros: 0,
+        lastDate: dt,   // desde quando o juros da parcela começa a contar
+        ativa: false    // vira true quando o vencimento passa
+      });
+    }
+
+    // fila de pagamentos por ordem cronológica.
+    // O recebidoOrig (base do CSV) não tem data — assume-se pago no dia 1, antes de qualquer vencimento.
+    const pagamentos = [];
+    const baseCSV = Number(b.recebidoOrig) || 0;
+    if (baseCSV > 0.005) pagamentos.push({ data: null, valor: baseCSV });
+    (e.pagos || []).forEach(p => {
+      pagamentos.push({ data: parseDateBR(p.data), valor: Number(p.valor) || 0 });
+    });
+    pagamentos.sort((a, b) => {
+      if (!a.data && !b.data) return 0;
+      if (!a.data) return -1;
+      if (!b.data) return 1;
+      return a.data - b.data;
+    });
+
+    // ordem fixa das parcelas pra aplicar pagamento (mais antiga primeiro)
+    const ordemPag = parcelas.slice().sort((a, b) => {
+      if (a.vencDt && b.vencDt) return a.vencDt - b.vencDt;
+      if (a.vencDt) return -1;
+      if (b.vencDt) return 1;
+      return a.num - b.num;
+    });
+
+    // acumula juros de todas as parcelas ativas até uma data-alvo
+    function acumularAte(dataAlvo) {
+      if (!dataAlvo) return;
+      for (const p of parcelas) {
+        // ativa a parcela se o vencimento já passou até dataAlvo
+        if (!p.ativa && p.vencDt && p.vencDt <= dataAlvo) {
+          p.ativa = true;
+          p.lastDate = p.vencDt;
+        }
+        if (p.ativa && p.principal > 0.005 && p.lastDate) {
+          const dias = Math.max(0, Math.round((dataAlvo - p.lastDate) / 86400000));
+          if (dias > 0) {
+            p.juros += p.principal * taxa * dias;
+            p.lastDate = dataAlvo;
+          }
+        } else if (p.ativa && p.lastDate && dataAlvo > p.lastDate) {
+          // principal zerado: juros não cresce mais, só avança a data
+          p.lastDate = dataAlvo;
+        }
+      }
+    }
+
+    // aplica um pagamento: PRIMEIRO abate o principal de TODAS as parcelas (mais antiga
+    // primeiro), e só depois de zerar todo o principal volta pra pagar os juros acumulados.
+    // Assim o dinheiro que entra derruba mais rápido o que está rendendo juros.
+    function aplicarPagamento(valor) {
+      let rest = Number(valor) || 0;
+      if (rest <= 0.005) return;
+      // 1ª passada: só principal
+      for (const p of ordemPag) {
+        if (rest <= 0.005) return;
+        if (p.principal > 0.005) {
+          const ap = Math.min(p.principal, rest);
+          p.principal -= ap;
+          rest -= ap;
+        }
+      }
+      // 2ª passada: juros acumulados
+      for (const p of ordemPag) {
+        if (rest <= 0.005) return;
+        if (p.juros > 0.005) {
+          const ap = Math.min(p.juros, rest);
+          p.juros -= ap;
+          rest -= ap;
+        }
+      }
+    }
+
+    // processa pagamentos em ordem: primeiro acumula juros até a data do pagamento, depois aplica
+    for (const pg of pagamentos) {
+      if (pg.data) acumularAte(pg.data);
+      aplicarPagamento(pg.valor);
+    }
+    // fecha o cálculo acumulando até hoje
+    acumularAte(hoje);
+
+    // monta itens da sugestão: qualquer parcela com dívida em aberto (principal OU juros)
+    const itens = [];
+    let somaBruta = 0;
+    for (const p of parcelas) {
+      const temPrincipal = p.principal > 0.005;
+      const temJuros = p.juros > 0.005;
+      if (!temPrincipal && !temJuros) continue;
+      // se ainda nem venceu e não tem juros, não sugere (parcela futura)
+      if (!temJuros && (!p.vencDt || hoje < p.vencDt)) continue;
+
+      const diasAtraso = (p.vencDt && hoje > p.vencDt)
+        ? Math.max(0, Math.round((hoje - p.vencDt) / 86400000))
+        : 0;
+      const sugerido = Math.ceil(p.principal + p.juros);
+      somaBruta += p.principal + p.juros;
+      itens.push({
+        num: p.num,
+        vencimento: p.venc,
+        principal: p.principal,
+        juros: p.juros,
+        dias: diasAtraso,
+        sugerido: sugerido,
+        soJuros: !temPrincipal && temJuros
+      });
+    }
+
+    return { taxaDia, itens, total: Math.ceil(somaBruta) };
+  }
+
+  function renderSugestaoJuros(b) {
+    if (!mSugestao) return;
+    const sug = calcularSugestoesJuros(b);
+    if (!sug.taxaDia || !sug.itens.length) {
+      mSugestao.style.display = "none";
+      mSugestao.innerHTML = "";
+      return;
+    }
+    let html = '<div class="ms-head">⏱️ Sugestão com juros de ' +
+      String(sug.taxaDia).replace(".", ",") + '% ao dia</div>';
+    sug.itens.forEach(it => {
+      let linhaValor;
+      if (it.soJuros) {
+        // parcela com principal já quitado, só juros pendurados
+        linhaValor = 'Juros em aberto <span class="ms-val-total">' + fmtBRL.format(it.sugerido) + '</span>';
+      } else {
+        linhaValor = fmtBRL.format(it.principal) + ' + ' + fmtBRL.format(it.juros) +
+          ' = <span class="ms-val-total">' + fmtBRL.format(it.sugerido) + '</span>';
+      }
+      const rotuloAtraso = it.soJuros
+        ? 'juros pendente da parcela quitada'
+        : (it.dias > 0 ? (it.dias + ' dia' + (it.dias === 1 ? '' : 's') + ' de atraso') : 'em dia');
+      html += '<div class="ms-row">' +
+        '<span class="ms-lbl">Parcela ' + it.num +
+          (it.vencimento ? ' · venc. ' + escapeHtml(it.vencimento) : '') +
+          ' · ' + rotuloAtraso +
+        '</span>' +
+        '<span class="ms-val">' + linhaValor + '</span>' +
+      '</div>';
+    });
+    if (sug.itens.length > 1) {
+      html += '<div class="ms-row" style="border-top:1px solid var(--line);margin-top:.3rem;padding-top:.5rem">' +
+        '<span class="ms-lbl" style="font-weight:800;color:var(--ink)">Total sugerido</span>' +
+        '<span class="ms-val ms-val-total" style="font-size:.95rem">' + fmtBRL.format(sug.total) + '</span>' +
+      '</div>';
+    }
+    // botões pra preencher o campo
+    html += '<div class="ms-quick">';
+    sug.itens.forEach(it => {
+      html += '<button data-v="' + it.sugerido + '">P' + it.num + ': ' + fmtBRL.format(it.sugerido) + '</button>';
+    });
+    if (sug.itens.length > 1) {
+      html += '<button data-v="' + sug.total + '">Todas: ' + fmtBRL.format(sug.total) + '</button>';
+    }
+    html += '</div>';
+    html += '<div class="ms-foot">Valores são apenas sugestão — o campo abaixo continua livre pra digitar o que cobrar de fato.</div>';
+    mSugestao.innerHTML = html;
+    mSugestao.style.display = "block";
+  }
+
+  // clique nos botões de sugestão preenche o valor
+  document.addEventListener("click", ev => {
+    const btn = ev.target.closest("#m-sugestao .ms-quick button");
+    if (!btn) return;
+    const v = parseFloat(btn.dataset.v) || 0;
+    if (v > 0) {
+      mAmount.value = v.toFixed(2).replace(".", ",");
+      mErr.textContent = "";
+    }
+  });
 
   function openModal(key) {
     const b = base.find(x => x.key === key);
@@ -2071,6 +2291,7 @@
     mQuick.innerHTML =
       '<button data-v="' + half + '">Metade (' + fmtBRL.format(half) + ')</button>' +
       '<button data-v="' + r.saldo + '">Quitar tudo (' + fmtBRL.format(r.saldo) + ')</button>';
+    renderSugestaoJuros(b);
     overlay.classList.add("show");
     setTimeout(() => mAmount.focus(), 50);
   }
@@ -2286,21 +2507,19 @@
       html += '<div class="hist-reneg-head">🔒 Pagamentos antes da renegociação' +
         (r.renegEm ? ' (' + escapeHtml(r.renegEm) + ')' : '') +
         ' · total ' + fmtBRL.format(r.renegPagoAntes || 0) + '</div>';
-      html += hist.map(p =>
-        (() => {
-          const f = formaDe(p);
-          const chipForma = '<span class="hi-forma hi-forma-' + f + '">' + FORMA_ICON[f] + " " + FORMA_LABEL[f] + '</span>';
-          const obsLegado = p.obs ? '<span class="hi-obs">' + escapeHtml(p.obs) + '</span>' : '';
-          return '<div class="hist-item frozen' + (isDesconto(p) ? ' is-desconto' : '') + '">' +
-            '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
-            '<div class="hi-mid">' +
-              '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
-              '<div class="hi-tags">' + chipForma + obsLegado + '</div>' +
-            '</div>' +
-            '<span class="hi-lock" title="Congelado pela renegociação">🔒</span>' +
-          '</div>';
-        })()
-      ).join("");
+      html += hist.map(p => {
+        const f = formaDe(p);
+        const chipForma = '<span class="hi-forma hi-forma-' + f + '">' + FORMA_ICON[f] + " " + FORMA_LABEL[f] + '</span>';
+        const obsLegado = p.obs ? '<span class="hi-obs">' + escapeHtml(p.obs) + '</span>' : '';
+        return '<div class="hist-item frozen' + (isDesconto(p) ? ' is-desconto' : '') + '">' +
+          '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
+          '<div class="hi-mid">' +
+            '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
+            '<div class="hi-tags">' + chipForma + obsLegado + '</div>' +
+          '</div>' +
+          '<span class="hi-lock" title="Congelado pela renegociação">🔒</span>' +
+        '</div>';
+      }).join("");
       if (r.pagos.length) html += '<div class="hist-reneg-head">Pagamentos do novo acordo</div>';
     }
 
@@ -2311,13 +2530,12 @@
 
     html += r.pagos.map((p, idx) => {
       const f = formaDe(p);
-      const rotulo = (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada");
       const chipForma = '<span class="hi-forma hi-forma-' + f + '">' + FORMA_ICON[f] + " " + FORMA_LABEL[f] + '</span>';
       const obsLegado = p.obs ? '<span class="hi-obs">' + escapeHtml(p.obs) + '</span>' : '';
       return '<div class="hist-item' + (isDesconto(p) ? ' is-desconto' : '') + '">' +
         '<div class="hi-val">' + fmtBRL.format(Number(p.valor) || 0) + '</div>' +
         '<div class="hi-mid">' +
-          '<div class="hi-date">' + rotulo + '</div>' +
+          '<div class="hi-date">' + (p.data ? "Pago em " + escapeHtml(p.data) : "Data não registrada") + '</div>' +
           '<div class="hi-tags">' + chipForma + obsLegado + '</div>' +
         '</div>' +
         '<button class="hi-del" data-idx="' + idx + '" title="Remover este pagamento">✕</button>' +
@@ -3515,6 +3733,7 @@
   // ====================== CONFIGURAÇÕES DA EMPRESA ======================
   const cfgNome = document.getElementById("cfg-nome");
   const cfgCnpj = document.getElementById("cfg-cnpj");
+  const cfgJuros = document.getElementById("cfg-juros");
   const cfgLogoFile = document.getElementById("cfg-logo-file");
   const cfgLogoPreview = document.getElementById("cfg-logo-preview");
   let cfgLogoTmp = null; // guarda a logo escolhida até salvar
@@ -3532,6 +3751,7 @@
   function carregarFormEmpresa() {
     cfgNome.value = empresa.nome || "";
     cfgCnpj.value = empresa.cnpj || "";
+    cfgJuros.value = empresa.taxaJurosDia != null ? String(empresa.taxaJurosDia).replace(".", ",") : "";
     cfgLogoTmp = empresa.logo || null;
     pintarPreviewLogo(cfgLogoTmp);
   }
@@ -3589,9 +3809,12 @@
   });
 
   document.getElementById("cfg-save").addEventListener("click", () => {
+    const jurosRaw = (cfgJuros.value || "").trim().replace(",", ".");
+    const jurosNum = parseFloat(jurosRaw);
     empresa = {
       nome: (cfgNome.value || "").trim(),
       cnpj: (cfgCnpj.value || "").trim(),
+      taxaJurosDia: (!isNaN(jurosNum) && jurosNum > 0) ? jurosNum : 0,
       logo: cfgLogoTmp || ""
     };
     aplicarMarca();
@@ -3686,10 +3909,9 @@
       // pagamentos ativos + congelados por renegociação (ambos são dinheiro real recebido)
       const todosPagamentos = (f.pagos || []).concat(Array.isArray(f.pagosHist) ? f.pagosHist : []);
       todosPagamentos.forEach(p => {
+        if (isDesconto(p)) return; // desconto não entra em relatório de caixa
         const dtPg = parseDateBR(p.data);
         if (dentroPeriodo(dtPg, ini, fim)) {
-          // desconto não entra no caixa nem no lucro recebido (foi valor perdoado, não recebido)
-          if (isDesconto(p)) return;
           const v = Number(p.valor) || 0;
           recebidoPeriodo += v;
           topClientes[f.nome] = (topClientes[f.nome] || 0) + v;
