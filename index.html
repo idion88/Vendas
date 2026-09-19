@@ -643,6 +643,7 @@
   <div class="tabs" id="tabs">
     <button class="tab-btn active" data-view="gestao">Gestão</button>
     <button class="tab-btn" data-view="uniao">União</button>
+    <button class="tab-btn" data-view="apagar">A pagar</button>
     <button class="tab-btn" data-view="relatorios">Relatórios</button>
     <button class="tab-btn" data-view="config">Configurações</button>
   </div>
@@ -725,6 +726,22 @@
     </div>
     <div id="uniaoConteudo"></div>
   </div><!-- /view-uniao -->
+
+  <div id="view-apagar" style="display:none">
+    <div class="rep-section-title">📅 Parcelas a vencer no dia</div>
+    <p style="color:var(--ink-soft);font-size:.85rem;margin:0 0 .8rem;padding:0 clamp(1rem,3vw,2rem)">
+      Escolha um dia no calendário para ver todas as parcelas em aberto que vencem nele — quem você precisa cobrar.
+    </p>
+    <div class="pgd-toolbar">
+      <div class="date-wrap">
+        <input id="apg-data" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10">
+        <span class="cal-btn" aria-hidden="true">📅</span>
+        <input type="date" class="cal-native" data-target="apg-data" title="Escolher dia">
+      </div>
+      <button class="btn-mini" id="apg-hoje" style="background:var(--paper);color:var(--brand);border:1px solid var(--line)">Hoje</button>
+    </div>
+    <div id="apg-resultado"></div>
+  </div><!-- /view-apagar -->
 
   <div id="view-relatorios" style="display:none">
     <div class="rep-toolbar">
@@ -3825,6 +3842,7 @@
   // ====================== RELATÓRIOS ======================
   const repState = { per: "mes", ini: null, fim: null };
   let pgdData = "";   // dia escolhido em "Pagamentos do dia" (vazio = hoje)
+  let apgData = "";   // dia escolhido na aba "A pagar" (vazio = hoje)
 
   document.getElementById("tabs").addEventListener("click", e => {
     const btn = e.target.closest(".tab-btn");
@@ -3834,9 +3852,11 @@
     const view = btn.dataset.view;
     document.getElementById("view-gestao").style.display = view === "gestao" ? "" : "none";
     document.getElementById("view-uniao").style.display = view === "uniao" ? "" : "none";
+    document.getElementById("view-apagar").style.display = view === "apagar" ? "" : "none";
     document.getElementById("view-relatorios").style.display = view === "relatorios" ? "" : "none";
     document.getElementById("view-config").style.display = view === "config" ? "" : "none";
     if (view === "uniao") renderUniao();
+    if (view === "apagar") renderAPagar();
     if (view === "relatorios") renderRelatorios();
     if (view === "config") carregarFormEmpresa();
   });
@@ -4054,6 +4074,82 @@
         '<span class="rl-rank">' + (i + 1) + '</span>' +
         '<span class="rl-name">' + escapeHtml(x.nome) +
           (x.obs ? ' <span style="color:var(--ink-soft);font-weight:400;font-size:.82rem">— ' + escapeHtml(x.obs) + '</span>' : '') +
+        '</span>' +
+        '<span class="rl-val">' + fmtBRL.format(x.valor) + '</span></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  }
+
+  // lista as parcelas EM ABERTO que vencem num dia específico (agenda de cobrança)
+  function renderAPagar() {
+    const cont = document.getElementById("apg-resultado");
+    if (!cont) return;
+    // liga os controles uma única vez (antes de qualquer retorno antecipado)
+    const inpDiaInit = document.getElementById("apg-data");
+    if (inpDiaInit && !inpDiaInit.value) inpDiaInit.value = (apgData || hojeBR()).trim();
+    if (inpDiaInit && !inpDiaInit.dataset.ligado) {
+      inpDiaInit.dataset.ligado = "1";
+      inpDiaInit.addEventListener("input", () => {
+        inpDiaInit.value = mascaraData(inpDiaInit.value);
+        apgData = inpDiaInit.value.trim();
+        renderAPagar();
+      });
+    }
+    const btnHojeInit = document.getElementById("apg-hoje");
+    if (btnHojeInit && !btnHojeInit.dataset.ligado) {
+      btnHojeInit.dataset.ligado = "1";
+      btnHojeInit.addEventListener("click", () => {
+        apgData = hojeBR();
+        const i = document.getElementById("apg-data");
+        if (i) i.value = apgData;
+        renderAPagar();
+      });
+    }
+    const alvoStr = (apgData || hojeBR()).trim();
+    const alvo = parseDateBR(alvoStr);
+    if (!alvo) {
+      cont.innerHTML = '<div class="rep-empty">Digite um dia válido (dd/mm/aaaa) para ver as parcelas.</div>';
+      return;
+    }
+    const all = rows();
+    const itens = [];
+    all.forEach(f => {
+      const total = f.parcelasTotal || 0;
+      if (total < 1) return;
+      (f.parcInfo || []).forEach(p => {
+        // só parcelas com saldo em aberto (ignora pagas e transferidas p/ conta unificada)
+        if (p.falta <= 0.005) return;
+        if (p.status === "transferida") return;
+        if (p.dt && mesmoDia(p.dt, alvo)) {
+          itens.push({ nome: f.nome, parcela: p.i + 1, total: total, valor: p.falta });
+        }
+      });
+    });
+    itens.sort((a, b) => b.valor - a.valor);
+    const somaDia = itens.reduce((s, x) => s + x.valor, 0);
+
+    const ehHoje = mesmoDia(alvo, hojeMeiaNoite());
+    const titulo = ehHoje ? "hoje (" + alvoStr + ")" : alvoStr;
+
+    if (!itens.length) {
+      cont.innerHTML =
+        '<div class="rep-cards" style="margin-bottom:.4rem">' +
+          card("blue", "A receber em " + titulo, fmtBRL.format(0), "nenhuma parcela vence neste dia") +
+        '</div>';
+      return;
+    }
+
+    let html =
+      '<div class="rep-cards" style="margin-bottom:.7rem">' +
+        card("blue", "A receber em " + titulo, fmtBRL.format(somaDia), itens.length + " parcela(s) a vencer") +
+      '</div>';
+    html += '<div class="rep-list">';
+    itens.forEach((x, i) => {
+      html += '<div class="rep-list-row">' +
+        '<span class="rl-rank">' + (i + 1) + '</span>' +
+        '<span class="rl-name">' + escapeHtml(x.nome) +
+          ' <span style="color:var(--ink-soft);font-weight:400;font-size:.82rem">— parcela ' + x.parcela + '/' + x.total + '</span>' +
         '</span>' +
         '<span class="rl-val">' + fmtBRL.format(x.valor) + '</span></div>';
     });
