@@ -134,6 +134,13 @@
   .rep-list{border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden}
   .rep-list-row{display:flex;align-items:center;gap:.8rem;padding:.75rem 1.1rem;border-bottom:1px solid var(--line-soft)}
   .rep-list-row:last-child{border-bottom:none}
+  .px-data{flex-shrink:0;width:46px;text-align:center;font-weight:800;font-size:.85rem;color:var(--brand-dk);line-height:1.1}
+  .px-data small{display:block;font-weight:600;font-size:.7rem;color:var(--ink-soft);text-transform:capitalize}
+  .px-st{flex-shrink:0;font-size:.72rem;font-weight:700;padding:.2rem .55rem;border-radius:999px;border:1px solid currentColor}
+  .px-st.atraso{color:var(--debt)} .px-st.parcial{color:var(--pending)} .px-st.emdia{color:var(--paid)}
+  .px-grupo{padding:.55rem 1.1rem;font-size:.78rem;font-weight:800;color:var(--ink-soft);background:var(--line-soft);border-bottom:1px solid var(--line-soft)}
+  .px-filtros{display:flex;flex-direction:column;gap:.6rem;padding:0 clamp(1rem,3vw,2rem) .9rem}
+  .px-filtros .rep-periods span{font-size:.8rem;font-weight:700;color:var(--ink-soft);align-self:center;margin-right:.2rem}
   .rep-list-row .rl-rank{width:26px;height:26px;border-radius:50%;background:var(--chip);color:var(--brand-dk);
     display:grid;place-items:center;font-size:.78rem;font-weight:800;flex-shrink:0}
   .rep-list-row .rl-name{font-weight:600;font-size:.9rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -644,6 +651,7 @@
     <button class="tab-btn active" data-view="gestao">Gestão</button>
     <button class="tab-btn" data-view="uniao">União</button>
     <button class="tab-btn" data-view="apagar">A pagar</button>
+    <button class="tab-btn" data-view="proximos">Próximos</button>
     <button class="tab-btn" data-view="relatorios">Relatórios</button>
     <button class="tab-btn" data-view="config">Configurações</button>
   </div>
@@ -668,6 +676,7 @@
       <button class="chip-btn" data-filter="partial">Parcial</button>
       <button class="chip-btn" data-filter="settled">Quitados</button>
     </div>
+    <button class="chip-btn" id="sortStatus" title="Ordenar por status (clique de novo para inverter)">⇅ Status</button>
   </div>
 
   <div class="table-wrap">
@@ -676,7 +685,7 @@
         <tr>
           <th class="num">#</th>
           <th class="sortable" data-sort="nome">Cliente <span class="arrow">↕</span></th>
-          <th>Status</th>
+          <th class="sortable" data-sort="status">Status <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="saldo">Falta pagar <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="vencidoValor">Atrasado <span class="arrow">↕</span></th>
           <th class="sortable money" data-sort="valorParcela">Valor parcela <span class="arrow">↕</span></th>
@@ -742,6 +751,28 @@
     </div>
     <div id="apg-resultado"></div>
   </div><!-- /view-apagar -->
+
+  <div id="view-proximos" style="display:none">
+    <div class="rep-section-title">🗓️ Próximos pagamentos</div>
+    <p style="color:var(--ink-soft);font-size:.85rem;margin:0 0 .8rem;padding:0 clamp(1rem,3vw,2rem)">
+      Parcelas em aberto que vencem a partir de amanhã, dentro do período escolhido.
+    </p>
+    <div class="px-filtros">
+      <div class="rep-periods" id="px-dias">
+        <span>Período:</span>
+        <button class="chip-btn active" data-dias="7">7 dias</button>
+        <button class="chip-btn" data-dias="15">15 dias</button>
+        <button class="chip-btn" data-dias="30">30 dias</button>
+      </div>
+      <div class="rep-periods" id="px-ordem">
+        <span>Ordenar:</span>
+        <button class="chip-btn active" data-ord="data">Data</button>
+        <button class="chip-btn" data-ord="estado">Estado</button>
+        <button class="chip-btn" data-ord="valor">Valor</button>
+      </div>
+    </div>
+    <div id="px-resultado"></div>
+  </div><!-- /view-proximos -->
 
   <div id="view-relatorios" style="display:none">
     <div class="rep-toolbar">
@@ -1914,6 +1945,11 @@
       let va, vb;
       if (state.sortKey === "nome") { va = a.nome.toLowerCase(); vb = b.nome.toLowerCase(); }
       else if (state.sortKey === "data") { va = a.dataSort; vb = b.dataSort; }
+      else if (state.sortKey === "status") {
+        // quitados primeiro (asc) ou pendentes primeiro (desc); empate → nome
+        va = STATUS_ORD[a.status] ?? 9; vb = STATUS_ORD[b.status] ?? 9;
+        if (va === vb) return a.nome.toLowerCase().localeCompare(b.nome.toLowerCase());
+      }
       else { va = a[state.sortKey]; vb = b[state.sortKey]; }
       if (va < vb) return -1 * dir;
       if (va > vb) return 1 * dir;
@@ -1923,6 +1959,7 @@
   }
 
   const statusLabel = { open: "Em aberto", partial: "Parcial", settled: "Quitado", merged: "Unificada" };
+  const STATUS_ORD = { settled: 0, merged: 1, partial: 2, open: 3 };
 
   function render() {
     const data = applyFilters();
@@ -2015,14 +2052,26 @@
       if (key === state.sortKey) { th.classList.add("sorted"); arrow.textContent = state.sortDir === "asc" ? "↑" : "↓"; }
       else { th.classList.remove("sorted"); arrow.textContent = "↕"; }
     });
+    const bs = document.getElementById("sortStatus");
+    if (bs) {
+      const on = state.sortKey === "status";
+      bs.classList.toggle("active", on);
+      bs.textContent = !on ? "⇅ Status" : (state.sortDir === "asc" ? "⇅ Quitados em cima" : "⇅ Pendentes em cima");
+    }
   }
   document.querySelectorAll("thead th.sortable").forEach(th => {
     th.addEventListener("click", () => {
       const key = th.dataset.sort;
       if (state.sortKey === key) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-      else { state.sortKey = key; state.sortDir = (key === "nome" || key === "data") ? "asc" : "desc"; }
+      else { state.sortKey = key; state.sortDir = (key === "nome" || key === "data" || key === "status") ? "asc" : "desc"; }
       render();
     });
+  });
+  // botão de status (funciona também no celular, onde o cabeçalho da tabela fica oculto)
+  document.getElementById("sortStatus").addEventListener("click", () => {
+    if (state.sortKey === "status") state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    else { state.sortKey = "status"; state.sortDir = "asc"; }
+    render();
   });
 
   // ---------- busca ----------
@@ -3842,6 +3891,7 @@
   // ====================== RELATÓRIOS ======================
   const repState = { per: "mes", ini: null, fim: null };
   let pgdData = "";   // dia escolhido em "Pagamentos do dia" (vazio = hoje)
+  let pxDias = 7, pxOrdem = "data";   // filtros da aba "Próximos"
   let apgData = "";   // dia escolhido na aba "A pagar" (vazio = hoje)
 
   document.getElementById("tabs").addEventListener("click", e => {
@@ -3853,10 +3903,12 @@
     document.getElementById("view-gestao").style.display = view === "gestao" ? "" : "none";
     document.getElementById("view-uniao").style.display = view === "uniao" ? "" : "none";
     document.getElementById("view-apagar").style.display = view === "apagar" ? "" : "none";
+    document.getElementById("view-proximos").style.display = view === "proximos" ? "" : "none";
     document.getElementById("view-relatorios").style.display = view === "relatorios" ? "" : "none";
     document.getElementById("view-config").style.display = view === "config" ? "" : "none";
     if (view === "uniao") renderUniao();
     if (view === "apagar") renderAPagar();
+    if (view === "proximos") renderProximos();
     if (view === "relatorios") renderRelatorios();
     if (view === "config") carregarFormEmpresa();
   });
@@ -4151,6 +4203,91 @@
         '<span class="rl-name">' + escapeHtml(x.nome) +
           ' <span style="color:var(--ink-soft);font-weight:400;font-size:.82rem">— parcela ' + x.parcela + '/' + x.total + '</span>' +
         '</span>' +
+        '<span class="rl-val">' + fmtBRL.format(x.valor) + '</span></div>';
+    });
+    html += '</div>';
+    cont.innerHTML = html;
+  }
+
+  // lista as parcelas EM ABERTO que vencem de hoje até N dias (7/15/30)
+  function renderProximos() {
+    const cont = document.getElementById("px-resultado");
+    if (!cont) return;
+    // liga os filtros uma única vez
+    [["px-dias", "dias"], ["px-ordem", "ord"]].forEach(([id, attr]) => {
+      const box = document.getElementById(id);
+      if (!box || box.dataset.ligado) return;
+      box.dataset.ligado = "1";
+      box.addEventListener("click", e => {
+        const b = e.target.closest(".chip-btn");
+        if (!b) return;
+        box.querySelectorAll(".chip-btn").forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        if (attr === "dias") pxDias = Number(b.dataset.dias) || 7;
+        else pxOrdem = b.dataset.ord || "data";
+        renderProximos();
+      });
+    });
+
+    const hoje = hojeMeiaNoite();
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);      // amanhã
+    const limite = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + pxDias); // amanhã + (N-1) = N dias corridos
+    const ESTADOS = {
+      atraso:  { rot: "Cliente em atraso", ord: 0 },
+      parcial: { rot: "Parcial",           ord: 1 },
+      emdia:   { rot: "Em dia",            ord: 2 }
+    };
+
+    const itens = [];
+    rows().forEach(f => {
+      const total = f.parcelasTotal || 0;
+      if (total < 1 || f.merged) return;
+      (f.parcInfo || []).forEach(p => {
+        if (p.falta <= 0.005 || p.status === "transferida" || !p.dt) return;
+        if (p.dt < inicio || p.dt > limite) return;
+        const est = f.vencidoValor > 0.005 ? "atraso" : (p.status === "parcial" ? "parcial" : "emdia");
+        itens.push({ nome: f.nome, parcela: p.i + 1, total, valor: p.falta, dt: p.dt, data: p.data, est });
+      });
+    });
+
+    const porData = (a, b) => a.dt - b.dt || b.valor - a.valor;
+    if (pxOrdem === "estado") itens.sort((a, b) => ESTADOS[a.est].ord - ESTADOS[b.est].ord || porData(a, b));
+    else if (pxOrdem === "valor") itens.sort((a, b) => b.valor - a.valor || a.dt - b.dt);
+    else itens.sort(porData);
+
+    const soma = itens.reduce((s, x) => s + x.valor, 0);
+    const somaAtraso = itens.filter(x => x.est === "atraso").reduce((s, x) => s + x.valor, 0);
+    const ddmm = d => String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+    const periodo = ddmm(inicio) + " a " + ddmm(limite);
+
+    let html = '<div class="rep-cards" style="margin-bottom:.7rem">' +
+      card("blue", "A receber em " + pxDias + " dias", fmtBRL.format(soma),
+           itens.length ? itens.length + " parcela(s) · " + periodo : "nenhuma parcela · " + periodo);
+    if (somaAtraso > 0.005) {
+      const n = itens.filter(x => x.est === "atraso").length;
+      html += card("red", "De clientes em atraso", fmtBRL.format(somaAtraso), n + " parcela(s) no período");
+    }
+    html += '</div>';
+
+    if (!itens.length) { cont.innerHTML = html; return; }
+
+    html += '<div class="rep-list">';
+    let grupoAtual = null;
+    itens.forEach(x => {
+      if (pxOrdem === "estado" && x.est !== grupoAtual) {
+        grupoAtual = x.est;
+        const g = itens.filter(y => y.est === x.est);
+        html += '<div class="px-grupo">' + ESTADOS[x.est].rot + ' — ' + g.length + ' · ' +
+          fmtBRL.format(g.reduce((s, y) => s + y.valor, 0)) + '</div>';
+      }
+      const dia = mesmoDia(x.dt, inicio) ? "amanhã"
+        : x.dt.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+      html += '<div class="rep-list-row">' +
+        '<span class="px-data">' + ddmm(x.dt) + '<small>' + dia + '</small></span>' +
+        '<span class="rl-name">' + escapeHtml(x.nome) +
+          ' <span style="color:var(--ink-soft);font-weight:400;font-size:.82rem">— ' + x.parcela + '/' + x.total + '</span>' +
+        '</span>' +
+        '<span class="px-st ' + x.est + '">' + ESTADOS[x.est].rot + '</span>' +
         '<span class="rl-val">' + fmtBRL.format(x.valor) + '</span></div>';
     });
     html += '</div>';
