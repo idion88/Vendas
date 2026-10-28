@@ -870,8 +870,8 @@
       <div class="field" style="margin-top:1rem">
         <label for="m-forma">Forma de pagamento</label>
         <select id="m-forma" style="width:100%;padding:.75rem .9rem;font-size:1rem;font-weight:600;border:1px solid var(--line);border-radius:11px;background:var(--input-bg);color:var(--ink);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%),linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:2.2rem">
-          <option value="dinheiro">💵 Dinheiro</option>
           <option value="pix">📲 Pix</option>
+          <option value="dinheiro">💵 Dinheiro</option>
           <option value="deposito">🏦 Depósito</option>
           <option value="credito">💳 Crédito</option>
           <option value="desconto">🎁 Desconto (não entra no caixa)</option>
@@ -882,6 +882,21 @@
     <div class="modal-foot">
       <button class="btn-cancel" id="m-cancel">Cancelar</button>
       <button class="btn-confirm" id="m-confirm">Confirmar pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- pop-up: compartilhar extrato após pagamento -->
+<div class="overlay" id="share-overlay">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:380px">
+    <div class="modal-head">
+      <h3>Pagamento registrado ✓</h3>
+      <div class="client" id="share-client">—</div>
+    </div>
+    <div class="modal-body"><p style="margin:0;line-height:1.6">Deseja compartilhar o extrato de pagamento atualizado?</p></div>
+    <div class="modal-foot">
+      <button class="btn-cancel" id="share-nao">Não</button>
+      <button class="btn-confirm" id="share-sim">Sim, compartilhar</button>
     </div>
   </div>
 </div>
@@ -2350,7 +2365,7 @@
     mPaid.textContent = fmtBRL.format(r.recebido);
     mDebt.textContent = fmtBRL.format(r.saldo);
     mAmount.value = "";
-    mForma.value = "dinheiro";
+    mForma.value = "pix";
     mData.value = hojeBR();
     mErr.textContent = "";
     const half = Math.round((r.saldo / 2) * 100) / 100;
@@ -2397,7 +2412,25 @@
       fmtBRL.format(val) +
       (foiDesconto ? " concedido a " : " registrado para ") + b.nome
     );
+    perguntarCompartilhar(b.key, b.nome);
   }
+
+  // ---------- pop-up: compartilhar o extrato logo após o pagamento ----------
+  const shareOverlay = document.getElementById("share-overlay");
+  let shareKey = null;
+  function perguntarCompartilhar(key, nome) {
+    shareKey = key;
+    document.getElementById("share-client").textContent = nome || "";
+    shareOverlay.classList.add("show");
+  }
+  function fecharCompartilhar() { shareOverlay.classList.remove("show"); shareKey = null; }
+  document.getElementById("share-nao").addEventListener("click", fecharCompartilhar);
+  shareOverlay.addEventListener("click", e => { if (e.target === shareOverlay) fecharCompartilhar(); });
+  document.getElementById("share-sim").addEventListener("click", () => {
+    const k = shareKey;
+    fecharCompartilhar();
+    if (k != null) compartilharFicha(k);
+  });
 
   // grava a data de pagamento SOMENTE nas parcelas quitadas por ESTE pagamento.
   // Parcelas antigas (quitadas antes, sem data congelada) ficam sem data — assim a data
@@ -3139,9 +3172,11 @@
     });
   }
 
-  async function compartilharFicha() {
-    if (!detKey) return;
-    const b = base.find(x => x.key === detKey);
+  async function compartilharFicha(keyArg) {
+    // pode vir da ficha aberta (botão) ou do pop-up após um pagamento
+    const key = (keyArg != null && typeof keyArg !== "object") ? keyArg : detKey;
+    if (!key) return;
+    const b = base.find(x => x.key === key);
     if (!b) return;
     const r = compute(b);
     const canvas = gerarImagemFicha(r);
